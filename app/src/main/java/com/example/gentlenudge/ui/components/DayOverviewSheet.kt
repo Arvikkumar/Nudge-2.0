@@ -100,8 +100,6 @@ import com.example.gentlenudge.notification.NudgeAlarmScheduler
 import com.example.gentlenudge.notification.NudgeEventNotificationScheduler
 import com.example.gentlenudge.ui.theme.ImportantDot
 import com.example.gentlenudge.ui.theme.NudgeBlue
-import com.example.gentlenudge.ui.theme.NudgeBlueContainer
-import com.example.gentlenudge.ui.theme.PaperParchmentLight
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date

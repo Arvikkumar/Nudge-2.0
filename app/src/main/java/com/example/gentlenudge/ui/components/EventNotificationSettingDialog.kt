@@ -66,7 +66,6 @@ import androidx.core.content.ContextCompat
 import com.example.gentlenudge.notification.EventNotificationMode
 import com.example.gentlenudge.notification.NudgeEventNotificationScheduler
 import com.example.gentlenudge.ui.theme.NudgeBlue
-import com.example.gentlenudge.ui.theme.NudgeBlueContainer
 
 @Composable
 fun EventNotificationSettingDialog(
@@ -130,7 +129,7 @@ fun EventNotificationSettingDialog(
                     modifier = Modifier
                         .size(42.dp)
                         .clip(CircleShape)
-                        .background(if (isDark) MaterialTheme.colorScheme.primaryContainer else NudgeBlueContainer),
+                        .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -453,7 +452,7 @@ private fun EventOptionCard(
 ) {
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val bgColor = if (isSelected) {
-        if (isDark) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else NudgeBlueContainer.copy(alpha = 0.6f)
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (isDark) 0.5f else 0.6f)
     } else {
         if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f) else Color(0xFFFAF9F6)
     }

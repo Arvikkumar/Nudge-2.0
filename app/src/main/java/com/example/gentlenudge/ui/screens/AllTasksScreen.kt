@@ -50,7 +50,6 @@ import com.example.gentlenudge.deepdive.DeepDiveManager
 import com.example.gentlenudge.ui.components.DeepDiveCard
 import com.example.gentlenudge.ui.components.TaskSlipItem
 import com.example.gentlenudge.ui.theme.NudgeBlue
-import com.example.gentlenudge.ui.theme.NudgeBlueContainer
 
 @Composable
 fun AllTasksScreen(
@@ -154,7 +153,7 @@ fun AllTasksScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(NudgeBlueContainer)
+                                .background(MaterialTheme.colorScheme.primaryContainer)
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
@@ -230,7 +229,7 @@ fun AllTasksScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(NudgeBlueContainer)
+                                .background(MaterialTheme.colorScheme.primaryContainer)
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
@@ -327,7 +326,7 @@ fun AllTasksScreen(
                                 .padding(vertical = 2.dp)
                                 .testTag("completed_selection_toolbar"),
                             shape = RoundedCornerShape(12.dp),
-                            color = NudgeBlueContainer.copy(alpha = 0.5f),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                             border = BorderStroke(1.dp, NudgeBlue.copy(alpha = 0.2f))
                         ) {
                             Row(

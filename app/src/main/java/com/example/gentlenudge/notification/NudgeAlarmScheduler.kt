@@ -251,7 +251,7 @@ object NudgeAlarmScheduler {
             }
 
             // If a non-repeating task is in the past, do not schedule alarm and do NOT roll over
-            if (finalTriggerMillis <= now && !isRelativeTimePhrase(task.timeLabel)) {
+            if (finalTriggerMillis <= now) {
                 Log.w(TAG, "Task ${task.id} ('${task.title}') is in the past ($finalTriggerMillis <= $now) and non-repeating. Skipping schedule.")
                 return
             }

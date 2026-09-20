@@ -97,6 +97,30 @@ object NudgeNotificationHelper {
         }
     }
 
+    /**
+     * Checks if a sound URI can actually be opened and read by the current process/audio system.
+     * Returns true if accessible, false if invalid, revoked, deleted, or unreadable.
+     */
+    private fun isSoundUriAccessible(context: Context, uri: Uri): Boolean {
+        return try {
+            when (uri.scheme) {
+                "content" -> {
+                    context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { true } ?: false
+                }
+                "android.resource", "file" -> {
+                    context.contentResolver.openInputStream(uri)?.use { true } ?: false
+                }
+                else -> true
+            }
+        } catch (e: SecurityException) {
+            Log.w("NudgeNotification", "SecurityException checking ringtone URI $uri: ${e.message}")
+            false
+        } catch (e: Exception) {
+            Log.w("NudgeNotification", "Cannot access ringtone URI $uri: ${e.message}")
+            false
+        }
+    }
+
     private fun getRingtoneChannelId(context: Context, soundUri: Uri?, ringtoneTitle: String?): String {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && soundUri != null) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -132,24 +156,34 @@ object NudgeNotificationHelper {
         createNotificationChannels(context)
 
         val isFullRingtone = task.soundType.equals("Full ringtone", ignoreCase = true)
+        val defaultAlarmSound: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
         val customSoundUri: Uri? = if (isFullRingtone) {
             if (!task.ringtoneUri.isNullOrBlank()) {
-                try {
+                val parsedUri = try {
                     Uri.parse(task.ringtoneUri)
                 } catch (e: Exception) {
-                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                        ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                    Log.w("NudgeNotification", "Failed to parse ringtoneUri '${task.ringtoneUri}': ${e.message}")
+                    null
+                }
+
+                if (parsedUri != null && isSoundUriAccessible(context, parsedUri)) {
+                    parsedUri
+                } else {
+                    Log.w("NudgeNotification", "Ringtone URI '$parsedUri' inaccessible or invalid. Falling back to default alarm sound.")
+                    defaultAlarmSound
                 }
             } else {
-                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                defaultAlarmSound
             }
         } else {
             null
         }
 
         val channelId = if (isFullRingtone) {
-            if (customSoundUri != null && !task.ringtoneUri.isNullOrBlank()) {
+            if (customSoundUri != null && customSoundUri != defaultAlarmSound) {
                 getRingtoneChannelId(context, customSoundUri, task.ringtoneTitle)
             } else {
                 FULL_RINGTONE_CHANNEL_ID

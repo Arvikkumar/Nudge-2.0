@@ -62,16 +62,6 @@ import androidx.compose.ui.unit.sp
 import com.example.gentlenudge.data.model.NudgeTask
 import com.example.gentlenudge.ui.theme.ImportantDot
 import com.example.gentlenudge.ui.theme.NudgeBlue
-import com.example.gentlenudge.ui.theme.TagHomeBg
-import com.example.gentlenudge.ui.theme.TagHomeText
-import com.example.gentlenudge.ui.theme.TagOtherBg
-import com.example.gentlenudge.ui.theme.TagOtherText
-import com.example.gentlenudge.ui.theme.TagPersonalBg
-import com.example.gentlenudge.ui.theme.TagPersonalText
-import com.example.gentlenudge.ui.theme.TagShoppingBg
-import com.example.gentlenudge.ui.theme.TagShoppingText
-import com.example.gentlenudge.ui.theme.TagWorkBg
-import com.example.gentlenudge.ui.theme.TagWorkText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -342,7 +332,7 @@ private fun DeletedTaskCard(
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFFB33600)
+                                color = ImportantDot
                             )
                         )
                     }
@@ -457,8 +447,8 @@ private fun DeletedTaskCard(
                     modifier = Modifier.testTag("restore_button_${task.id}"),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = NudgeBlue.copy(alpha = 0.12f),
-                        contentColor = NudgeBlue
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.primary
                     ),
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                 ) {

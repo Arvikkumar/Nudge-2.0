@@ -16,15 +16,15 @@ val TextPrimaryLight = Color(0xFF1C1A17)
 val TextSecondaryLight = Color(0xFF756F67)
 val TextMutedLight = Color(0xFFA39D93)
 
-val PaperBackgroundDark = Color(0xFF191815)
-val PaperCardDark = Color(0xFF23211D)
-val PaperBorderDark = Color(0xFF33302A)
-val PaperParchmentDark = Color(0xFF262420)
-val TextPrimaryDark = Color(0xFFF0ECE3)
-val TextSecondaryDark = Color(0xFFA59E93)
+val PaperBackgroundDark = Color(0xFF181614)
+val PaperCardDark = Color(0xFF22201D)
+val PaperBorderDark = Color(0xFF3C3730)
+val PaperParchmentDark = Color(0xFF2A2723)
+val TextPrimaryDark = Color(0xFFEDE8DF)
+val TextSecondaryDark = Color(0xFF9F988D)
 val TextMutedDark = Color(0xFF756F65)
 
-// Category Tag Colors
+// Category Tag Colors (Light Mode)
 val TagPersonalBg = Color(0xFFEBF1FF)
 val TagPersonalText = Color(0xFF2E62F6)
 
@@ -39,6 +39,22 @@ val TagWorkText = Color(0xFF6B48B8)
 
 val TagOtherBg = Color(0xFFF5F1EB)
 val TagOtherText = Color(0xFF6D635C)
+
+// Category Tag Colors (Warm Charcoal Dark Mode Safe)
+val TagPersonalBgDark = Color(0xFF1E283C)
+val TagPersonalTextDark = Color(0xFF96B7FF)
+
+val TagShoppingBgDark = Color(0xFF382318)
+val TagShoppingTextDark = Color(0xFFFFAB78)
+
+val TagHomeBgDark = Color(0xFF1D2F22)
+val TagHomeTextDark = Color(0xFFA2E4AA)
+
+val TagWorkBgDark = Color(0xFF2E223D)
+val TagWorkTextDark = Color(0xFFD2B3F9)
+
+val TagOtherBgDark = Color(0xFF2D2A26)
+val TagOtherTextDark = Color(0xFFDDD7CE)
 
 // Accents
 val ImportantDot = Color(0xFFFA541C)

@@ -58,7 +58,6 @@ import com.example.gentlenudge.data.events.NudgeCalendarEvent
 import com.example.gentlenudge.notification.EventNotificationMode
 import com.example.gentlenudge.notification.NudgeEventNotificationScheduler
 import com.example.gentlenudge.ui.theme.NudgeBlue
-import com.example.gentlenudge.ui.theme.PaperParchmentLight
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale

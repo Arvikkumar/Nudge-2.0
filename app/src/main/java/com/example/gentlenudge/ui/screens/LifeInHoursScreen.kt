@@ -154,12 +154,6 @@ import com.example.gentlenudge.data.model.withMonthColors
 import com.example.gentlenudge.export.TimeGoalsPdfExporter
 import com.example.gentlenudge.export.TimeGoalsPdfOptions
 import com.example.gentlenudge.ui.theme.NudgeBlue
-import com.example.gentlenudge.ui.theme.NudgeBlueContainer
-import com.example.gentlenudge.ui.theme.PaperBackgroundLight
-import com.example.gentlenudge.ui.theme.PaperBorderLight
-import com.example.gentlenudge.ui.theme.PaperCardLight
-import com.example.gentlenudge.ui.theme.TextPrimaryLight
-import com.example.gentlenudge.ui.theme.TextSecondaryLight
 import com.example.gentlenudge.ui.viewmodel.NudgeViewModel
 import java.time.LocalDate
 import java.time.Month
@@ -509,7 +503,7 @@ private fun LifeInHoursHeader(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                .border(1.dp, PaperBorderLight.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -555,7 +549,7 @@ private fun LifeInHoursHeader(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(NudgeBlueContainer)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
                             .clickable { onCurrentMonth() }
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
@@ -648,7 +642,7 @@ private fun HoursSubNavTabs(
                 val isSelected = tab == activeTab
                 val bg = if (isSelected) NudgeBlue else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                 val textColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                val border = if (isSelected) NudgeBlue else PaperBorderLight.copy(alpha = 0.5f)
+                val border = if (isSelected) NudgeBlue else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
 
                 Box(
                     modifier = Modifier
@@ -757,7 +751,7 @@ private fun DashboardView(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(NudgeBlueContainer),
+                                .background(MaterialTheme.colorScheme.primaryContainer),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -919,7 +913,7 @@ private fun MonthlySummaryCard(overallProgress: MonthlyOverallProgress) {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(PaperBorderLight, PaperBorderLight)))
+        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.outline, MaterialTheme.colorScheme.outline)))
     ) {
         Column(
             modifier = Modifier
@@ -944,7 +938,7 @@ private fun MonthlySummaryCard(overallProgress: MonthlyOverallProgress) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(NudgeBlueContainer)
+                        .background(MaterialTheme.colorScheme.primaryContainer)
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
@@ -993,7 +987,7 @@ private fun MonthlySummaryCard(overallProgress: MonthlyOverallProgress) {
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(PaperBorderLight.copy(alpha = 0.6f))
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.6f))
             ) {
                 Box(
                     modifier = Modifier
@@ -1194,7 +1188,7 @@ private fun TodayQuickEntrySection(
                                         .background(MaterialTheme.colorScheme.surface)
                                         .border(
                                             1.dp,
-                                            if (isDragging) gp.goal.parseColor().copy(alpha = 0.5f) else PaperBorderLight.copy(alpha = 0.5f),
+                                            if (isDragging) gp.goal.parseColor().copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                                             RoundedCornerShape(12.dp)
                                         )
                                         .clickable { onOpenRecordSheet(gp.goal, today) }
@@ -1636,7 +1630,7 @@ private fun GoalProgressCard(
             width = if (isDragging) 1.5.dp else 1.dp,
             brush = Brush.linearGradient(
                 if (isDragging) listOf(goalColor.copy(alpha = 0.6f), goalColor.copy(alpha = 0.6f))
-                else listOf(PaperBorderLight, PaperBorderLight)
+                else listOf(MaterialTheme.colorScheme.outline, MaterialTheme.colorScheme.outline)
             )
         )
     ) {
@@ -1743,7 +1737,7 @@ private fun GoalProgressCard(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(PaperBorderLight.copy(alpha = 0.6f))
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.6f))
             ) {
                 Box(
                     modifier = Modifier
@@ -1798,7 +1792,7 @@ private fun EmptyGoalsPlaceholder(onAddGoalClick: () -> Unit) {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
         ),
-        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(PaperBorderLight, PaperBorderLight)))
+        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.outline, MaterialTheme.colorScheme.outline)))
     ) {
         Column(
             modifier = Modifier
@@ -1810,7 +1804,7 @@ private fun EmptyGoalsPlaceholder(onAddGoalClick: () -> Unit) {
                 modifier = Modifier
                     .size(54.dp)
                     .clip(CircleShape)
-                    .background(NudgeBlueContainer),
+                    .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -1979,7 +1973,7 @@ private fun PastMonthsView(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(NudgeBlueContainer),
+                                .background(MaterialTheme.colorScheme.primaryContainer),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -2117,12 +2111,12 @@ private fun PastMonthsView(
                                         .clickable { onSelectMonth(ym) },
                                     shape = RoundedCornerShape(16.dp),
                                     colors = CardDefaults.cardColors(
-                                        containerColor = if (isSelected) NudgeBlueContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surface
+                                        containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surface
                                     ),
                                     border = CardDefaults.outlinedCardBorder().copy(
                                         width = if (isSelected) 1.5.dp else 1.dp,
                                         brush = Brush.linearGradient(
-                                            if (isSelected) listOf(NudgeBlue, NudgeBlue) else listOf(PaperBorderLight, PaperBorderLight)
+                                            if (isSelected) listOf(NudgeBlue, NudgeBlue) else listOf(MaterialTheme.colorScheme.outline, MaterialTheme.colorScheme.outline)
                                         )
                                     )
                                 ) {
@@ -2140,7 +2134,7 @@ private fun PastMonthsView(
                                                     .clip(CircleShape)
                                                     .background(
                                                         if (isSelected) NudgeBlue
-                                                        else if (totalMins > 0) NudgeBlueContainer
+                                                        else if (totalMins > 0) MaterialTheme.colorScheme.primaryContainer
                                                         else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                                     ),
                                                 contentAlignment = Alignment.Center
@@ -2170,7 +2164,7 @@ private fun PastMonthsView(
                                                         Box(
                                                             modifier = Modifier
                                                                 .clip(RoundedCornerShape(6.dp))
-                                                                .background(NudgeBlueContainer)
+                                                                .background(MaterialTheme.colorScheme.primaryContainer)
                                                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                                         ) {
                                                             Text(
@@ -2277,7 +2271,7 @@ private fun PastMonthsView(
                                 modifier = Modifier.testTag("select_year_button"),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = NudgeBlueContainer,
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
                                     contentColor = NudgeBlue
                                 ),
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
@@ -2409,7 +2403,7 @@ private fun ExportPdfView(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(NudgeBlueContainer),
+                                .background(MaterialTheme.colorScheme.primaryContainer),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -2622,7 +2616,7 @@ private fun ExportPdfView(
                                 ),
                                 border = CardDefaults.outlinedCardBorder().copy(
                                     width = 1.dp,
-                                    brush = Brush.linearGradient(listOf(PaperBorderLight, PaperBorderLight))
+                                    brush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.outline, MaterialTheme.colorScheme.outline))
                                 )
                             ) {
                                 Column(
@@ -2653,7 +2647,7 @@ private fun ExportPdfView(
                                                 .weight(1f)
                                                 .testTag("btn_range_start_month"),
                                             shape = RoundedCornerShape(10.dp),
-                                            border = BorderStroke(1.dp, if (isRangeInvalid) MaterialTheme.colorScheme.error else PaperBorderLight),
+                                            border = BorderStroke(1.dp, if (isRangeInvalid) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline),
                                             colors = ButtonDefaults.outlinedButtonColors(
                                                 containerColor = MaterialTheme.colorScheme.surface
                                             ),
@@ -2695,7 +2689,7 @@ private fun ExportPdfView(
                                                 .weight(1f)
                                                 .testTag("btn_range_end_month"),
                                             shape = RoundedCornerShape(10.dp),
-                                            border = BorderStroke(1.dp, if (isRangeInvalid) MaterialTheme.colorScheme.error else PaperBorderLight),
+                                            border = BorderStroke(1.dp, if (isRangeInvalid) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline),
                                             colors = ButtonDefaults.outlinedButtonColors(
                                                 containerColor = MaterialTheme.colorScheme.surface
                                             ),
@@ -3170,7 +3164,7 @@ private fun GoalDetailBottomSheet(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
-                border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(PaperBorderLight, PaperBorderLight)))
+                border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.outline, MaterialTheme.colorScheme.outline)))
             ) {
                 Row(
                     modifier = Modifier
@@ -3347,7 +3341,7 @@ private fun CalendarGridView(
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))
-            .border(1.dp, PaperBorderLight.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
             .padding(10.dp)
     ) {
         // Day Names Header
@@ -3409,7 +3403,7 @@ private fun CalendarGridView(
                                 .height(38.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(cellBg)
-                                .border(0.5.dp, PaperBorderLight.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .border(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                                 .clickable { onDayClick(dayProgress) }
                                 .padding(2.dp),
                             contentAlignment = Alignment.Center
@@ -3465,7 +3459,7 @@ private fun CalendarLegendRow() {
         LegendItem(symbol = "✓", label = "Completed", color = Color(0xFF2E7D32))
         LegendItem(symbol = "◐", label = "Partial", color = Color(0xFFE65100))
         LegendItem(symbol = "—", label = "Missed", color = Color(0xFFD84315))
-        LegendItem(symbol = "○", label = "Future", color = TextSecondaryLight)
+        LegendItem(symbol = "○", label = "Future", color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -3568,7 +3562,7 @@ private fun CreateOrEditGoalSheet(
                 shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = NudgeBlue,
-                    unfocusedBorderColor = PaperBorderLight
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
 
@@ -3647,7 +3641,7 @@ private fun CreateOrEditGoalSheet(
                         ),
                         border = CardDefaults.outlinedCardBorder().copy(
                             width = 1.dp,
-                            brush = Brush.linearGradient(listOf(PaperBorderLight, PaperBorderLight))
+                            brush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.outline, MaterialTheme.colorScheme.outline))
                         )
                     ) {
                         Column(
@@ -3693,7 +3687,7 @@ private fun CreateOrEditGoalSheet(
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(12.dp))
                                             .background(MaterialTheme.colorScheme.surface)
-                                            .border(1.dp, PaperBorderLight, RoundedCornerShape(12.dp))
+                                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
                                             .padding(horizontal = 4.dp, vertical = 2.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
@@ -3749,7 +3743,7 @@ private fun CreateOrEditGoalSheet(
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(12.dp))
                                             .background(MaterialTheme.colorScheme.surface)
-                                            .border(1.dp, PaperBorderLight, RoundedCornerShape(12.dp))
+                                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
                                             .padding(horizontal = 4.dp, vertical = 2.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
@@ -3800,10 +3794,10 @@ private fun CreateOrEditGoalSheet(
                                         modifier = Modifier
                                             .weight(1f)
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isChipSelected) NudgeBlueContainer else MaterialTheme.colorScheme.surface)
+                                            .background(if (isChipSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
                                             .border(
                                                 width = 1.dp,
-                                                color = if (isChipSelected) NudgeBlue else PaperBorderLight,
+                                                color = if (isChipSelected) NudgeBlue else MaterialTheme.colorScheme.outline,
                                                 shape = RoundedCornerShape(8.dp)
                                             )
                                             .clickable {
@@ -3850,7 +3844,7 @@ private fun CreateOrEditGoalSheet(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .background(MaterialTheme.colorScheme.surface)
-                        .border(1.dp, PaperBorderLight, RoundedCornerShape(14.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
                         .clickable { showColorPicker = true }
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -3865,7 +3859,7 @@ private fun CreateOrEditGoalSheet(
                                 .size(28.dp)
                                 .clip(CircleShape)
                                 .background(currentColor)
-                                .border(1.dp, PaperBorderLight, CircleShape)
+                                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
@@ -3961,7 +3955,7 @@ private fun CreateOrEditGoalSheet(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
-                            .border(1.dp, PaperBorderLight, RoundedCornerShape(10.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
                             .clickable { showMoreIconsDialog = true }
                             .padding(horizontal = 12.dp, vertical = 9.dp),
                         contentAlignment = Alignment.Center
@@ -4091,7 +4085,7 @@ private fun CustomColorPickerDialog(
                             .size(54.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .background(activeColor)
-                            .border(1.dp, PaperBorderLight, RoundedCornerShape(14.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
                     )
 
                     OutlinedTextField(
@@ -4260,7 +4254,7 @@ private fun CustomColorPickerDialog(
                                 }
                                 .border(
                                     width = if (isSelected) 3.dp else 1.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onBackground else PaperBorderLight,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.outline,
                                     shape = CircleShape
                                 ),
                             contentAlignment = Alignment.Center
@@ -4609,7 +4603,7 @@ private fun DailyTimeEntrySheet(
                     ),
                     border = CardDefaults.outlinedCardBorder().copy(
                         width = 1.dp,
-                        brush = Brush.linearGradient(listOf(PaperBorderLight, PaperBorderLight))
+                        brush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.outline, MaterialTheme.colorScheme.outline))
                     )
                 ) {
                     Column(
@@ -4655,7 +4649,7 @@ private fun DailyTimeEntrySheet(
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(MaterialTheme.colorScheme.surface)
-                                        .border(1.dp, PaperBorderLight, RoundedCornerShape(12.dp))
+                                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
                                         .padding(horizontal = 4.dp, vertical = 2.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
@@ -4729,7 +4723,7 @@ private fun DailyTimeEntrySheet(
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(MaterialTheme.colorScheme.surface)
-                                        .border(1.dp, PaperBorderLight, RoundedCornerShape(12.dp))
+                                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
                                         .padding(horizontal = 4.dp, vertical = 2.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
@@ -4804,7 +4798,7 @@ private fun DailyTimeEntrySheet(
                                         )
                                         .border(
                                             width = 1.dp,
-                                            color = if (isChipSelected) NudgeBlue else PaperBorderLight,
+                                            color = if (isChipSelected) NudgeBlue else MaterialTheme.colorScheme.outline,
                                             shape = RoundedCornerShape(8.dp)
                                         )
                                         .clickable {
@@ -4839,7 +4833,7 @@ private fun DailyTimeEntrySheet(
                 shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = NudgeBlue,
-                    unfocusedBorderColor = PaperBorderLight
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 ),
                 minLines = 2,
                 maxLines = 3

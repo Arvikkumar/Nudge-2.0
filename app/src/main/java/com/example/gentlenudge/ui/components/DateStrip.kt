@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.sp
 import com.example.gentlenudge.data.events.NudgeCalendarEvent
 import com.example.gentlenudge.data.events.NudgeEventsRepository
 import com.example.gentlenudge.ui.theme.NudgeBlue
-import com.example.gentlenudge.ui.theme.NudgeBlueContainer
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -189,7 +188,7 @@ fun DateStrip(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(NudgeBlueContainer)
+                        .background(MaterialTheme.colorScheme.primaryContainer)
                         .clickable {
                             val resetCal = Calendar.getInstance()
                             onDateSelected(resetCal)
@@ -206,7 +205,7 @@ fun DateStrip(
                     Icon(
                         imageVector = Icons.Outlined.Today,
                         contentDescription = "Jump to Today",
-                        tint = NudgeBlue,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(13.dp)
                     )
                     Text(
@@ -215,7 +214,7 @@ fun DateStrip(
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 11.5.sp
                         ),
-                        color = NudgeBlue
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }

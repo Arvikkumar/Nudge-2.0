@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.sp
 import com.example.gentlenudge.data.model.NudgeTask
 import com.example.gentlenudge.ui.components.TaskSlipItem
 import com.example.gentlenudge.ui.theme.NudgeBlue
-import com.example.gentlenudge.ui.theme.PaperParchmentLight
 
 @Composable
 fun HistoryScreen(
@@ -105,7 +104,7 @@ fun HistoryScreen(
                     .testTag("history_summary_card"),
                 shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = PaperParchmentLight
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
                 border = CardDefaults.outlinedCardBorder().copy(
                     brush = SolidColor(MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),

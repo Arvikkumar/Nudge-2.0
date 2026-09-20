@@ -70,7 +70,7 @@ class BootReceiver : BroadcastReceiver() {
                         val scheduledMillis = NudgeAlarmScheduler.getScheduledTriggerMillis(context, task, now)
                         val occurrenceKey = NudgeAlarmScheduler.getTaskOccurrenceKey(task.id, scheduledMillis)
 
-                        if (scheduledMillis <= now && !NudgeAlarmScheduler.isRelativeTimePhrase(task.timeLabel)) {
+                        if (scheduledMillis <= now) {
                             // Scheduled time passed while device was off or unhandled
                             if (!NudgeAlarmScheduler.isTaskReminderDelivered(context, occurrenceKey)) {
                                 if (notificationsEnabled) {

@@ -86,15 +86,12 @@ import com.example.gentlenudge.speech.SpeechRecognitionHelper
 import com.example.gentlenudge.ui.components.ComposerSheet
 import com.example.gentlenudge.ui.components.GentleNudgeLogo
 import com.example.gentlenudge.ui.components.NudgeCarvedBottomBar
-import com.example.gentlenudge.ui.components.ThemeToggleSwitch
 import com.example.gentlenudge.ui.screens.AllTasksScreen
 import com.example.gentlenudge.ui.screens.LifeInHoursScreen
 import com.example.gentlenudge.ui.screens.RecentlyDeletedScreen
 import com.example.gentlenudge.ui.screens.SettingsScreen
 import com.example.gentlenudge.ui.screens.TodayScreen
 import com.example.gentlenudge.ui.theme.NudgeBlue
-import com.example.gentlenudge.ui.theme.NudgeBlueContainer
-import com.example.gentlenudge.ui.theme.OnNudgeBlueContainer
 import com.example.gentlenudge.ui.theme.ThemeMode
 import com.example.gentlenudge.ui.theme.ToastBackground
 import com.example.gentlenudge.ui.viewmodel.NudgeViewModel
@@ -379,16 +376,6 @@ fun MainScreen(
                     }
                 },
                 actions = {
-                    // Light/Dark Theme Switch immediately to the left of Bloom identity badge
-                    ThemeToggleSwitch(
-                        isDark = isResolvedDark,
-                        onToggle = {
-                            val nextMode = if (isResolvedDark) ThemeMode.LIGHT else ThemeMode.DARK
-                            viewModel.setThemeMode(nextMode)
-                        }
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-
                     // Identity badge showing user's avatar & name (tappable to edit)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -597,7 +584,12 @@ fun MainScreen(
                                     viewModel.setAutoBackupSchedule(day, hour, minute)
                                 },
                                 onResetSampleData = { viewModel.resetSampleData() },
-                                onShowToast = { viewModel.showToast(it) }
+                                onShowToast = { viewModel.showToast(it) },
+                                isDark = isResolvedDark,
+                                onToggleTheme = {
+                                    val nextMode = if (isResolvedDark) ThemeMode.LIGHT else ThemeMode.DARK
+                                    viewModel.setThemeMode(nextMode)
+                                }
                             )
                         }
                     }

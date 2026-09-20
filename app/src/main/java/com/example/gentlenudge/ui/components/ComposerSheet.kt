@@ -130,8 +130,6 @@ import com.example.gentlenudge.speech.SpeechRecognitionHelper
 import com.example.gentlenudge.speech.VoiceInputState
 import com.example.gentlenudge.ui.theme.ImportantDot
 import com.example.gentlenudge.ui.theme.NudgeBlue
-import com.example.gentlenudge.ui.theme.NudgeBlueContainer
-import com.example.gentlenudge.ui.theme.OnNudgeBlueContainer
 import com.example.gentlenudge.ui.theme.SoftPeach
 import kotlinx.coroutines.delay
 import java.io.File
@@ -555,6 +553,17 @@ fun ComposerSheet(
                 result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
             }
             if (uri != null) {
+                // Safely persist read permission if supported by the provider (e.g., DocumentsProvider / external picker)
+                try {
+                    val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    context.contentResolver.takePersistableUriPermission(uri, takeFlags)
+                } catch (_: SecurityException) {
+                    // Standard system ringtones (e.g. content://media/internal/...) do not support persistable permission grants,
+                    // which is completely expected and normal.
+                } catch (_: Exception) {
+                    // Defensive fallback
+                }
+
                 val titleFound = try {
                     val ringtone = RingtoneManager.getRingtone(context, uri)
                     ringtone?.getTitle(context) ?: "Custom Ringtone"
@@ -850,7 +859,7 @@ fun ComposerSheet(
                 Card(
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = NudgeBlueContainer.copy(alpha = 0.55f)
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
                     ),
                     border = BorderStroke(1.dp, NudgeBlue.copy(alpha = 0.3f)),
                     modifier = Modifier
@@ -886,7 +895,7 @@ fun ComposerSheet(
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 0.3.sp
                                     ),
-                                    color = OnNudgeBlueContainer
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                             IconButton(
@@ -898,7 +907,7 @@ fun ComposerSheet(
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Dismiss preview",
-                                    tint = OnNudgeBlueContainer.copy(alpha = 0.7f),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
@@ -1169,7 +1178,7 @@ fun ComposerSheet(
                         .testTag("nlp_ambiguity_confirmation_card"),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = NudgeBlueContainer.copy(alpha = 0.85f)
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f)
                     ),
                     border = CardDefaults.outlinedCardBorder().copy(
                         brush = SolidColor(NudgeBlue.copy(alpha = 0.4f)),
@@ -1198,7 +1207,7 @@ fun ComposerSheet(
                                 },
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.SemiBold,
-                                    color = OnNudgeBlueContainer,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     fontSize = 13.sp
                                 )
                             )
@@ -1373,7 +1382,7 @@ fun ComposerSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .background(NudgeBlueContainer)
+                        .background(MaterialTheme.colorScheme.primaryContainer)
                         .clickable {
                             // Apply parsed NLP values smoothly while preserving transcription
                             selectedDate = nlpParsed.extractedDate
@@ -1407,7 +1416,7 @@ fun ComposerSheet(
                             text = "Interpreted as ${nlpParsed.extractedDate} at ${nlpParsed.extractedTime}",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 fontWeight = FontWeight.SemiBold,
-                                color = OnNudgeBlueContainer,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 fontSize = 12.5.sp
                             ),
                             maxLines = 1,
@@ -1454,7 +1463,7 @@ fun ComposerSheet(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(NudgeBlueContainer)
+                                .background(MaterialTheme.colorScheme.primaryContainer)
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
@@ -1757,7 +1766,7 @@ fun ComposerSheet(
                                                 modifier = Modifier
                                                     .size(44.dp)
                                                     .clip(CircleShape)
-                                                    .background(if (isThisPlaying) NudgeBlue else NudgeBlueContainer)
+                                                    .background(if (isThisPlaying) NudgeBlue else MaterialTheme.colorScheme.primaryContainer)
                                                     .clickable {
                                                         if (isThisPlaying) {
                                                             audioMemoManager.stopPlayback()
@@ -1921,8 +1930,8 @@ fun ComposerSheet(
                         },
                         label = { Text(date, style = MaterialTheme.typography.bodyMedium) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = NudgeBlueContainer,
-                            selectedLabelColor = OnNudgeBlueContainer
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ),
                         border = FilterChipDefaults.filterChipBorder(
                             enabled = true,
@@ -1954,8 +1963,8 @@ fun ComposerSheet(
                         )
                     },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = NudgeBlueContainer,
-                        selectedLabelColor = OnNudgeBlueContainer
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
                     border = FilterChipDefaults.filterChipBorder(
                         enabled = true,
@@ -1995,8 +2004,8 @@ fun ComposerSheet(
                         },
                         label = { Text(option, style = MaterialTheme.typography.bodyMedium) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = NudgeBlueContainer,
-                            selectedLabelColor = OnNudgeBlueContainer
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ),
                         border = FilterChipDefaults.filterChipBorder(
                             enabled = true,
@@ -2021,8 +2030,8 @@ fun ComposerSheet(
                         )
                     },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = NudgeBlueContainer,
-                        selectedLabelColor = OnNudgeBlueContainer
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
                     border = FilterChipDefaults.filterChipBorder(
                         enabled = true,
@@ -2086,8 +2095,8 @@ fun ComposerSheet(
                             )
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = NudgeBlueContainer,
-                            selectedLabelColor = OnNudgeBlueContainer
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     )
                 }
@@ -2106,8 +2115,8 @@ fun ComposerSheet(
                         )
                     },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = NudgeBlueContainer,
-                        selectedLabelColor = OnNudgeBlueContainer
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
                     modifier = Modifier.testTag("composer_custom_repeat_chip")
                 )
@@ -2135,8 +2144,8 @@ fun ComposerSheet(
                             Text(sound, style = MaterialTheme.typography.bodyMedium)
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = NudgeBlueContainer,
-                            selectedLabelColor = OnNudgeBlueContainer
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ),
                         border = FilterChipDefaults.filterChipBorder(
                             enabled = true,
@@ -2470,8 +2479,8 @@ private fun CustomRepeatDialog(
                                 Text(preset, style = MaterialTheme.typography.bodySmall)
                             },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = NudgeBlueContainer,
-                                selectedLabelColor = OnNudgeBlueContainer
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         )
                     }
@@ -2488,7 +2497,7 @@ private fun CustomRepeatDialog(
                 Card(
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isCustomIntervalMode) NudgeBlueContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                        containerColor = if (isCustomIntervalMode) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
                     ),
                     border = BorderStroke(
                         1.dp,
@@ -2568,8 +2577,8 @@ private fun CustomRepeatDialog(
                                         intervalUnit = unit
                                     },
                                     shape = RoundedCornerShape(8.dp),
-                                    color = if (isUnitSelected) NudgeBlueContainer else MaterialTheme.colorScheme.surface,
-                                    contentColor = if (isUnitSelected) OnNudgeBlueContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = if (isUnitSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                    contentColor = if (isUnitSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                                     border = BorderStroke(
                                         width = 1.dp,
                                         color = if (isUnitSelected) NudgeBlue else MaterialTheme.colorScheme.outlineVariant
@@ -2605,7 +2614,7 @@ private fun CustomRepeatDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .background(NudgeBlueContainer.copy(alpha = 0.5f))
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -2619,7 +2628,7 @@ private fun CustomRepeatDialog(
                     Text(
                         text = "Repeats: $activeRepeatRule",
                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                        color = OnNudgeBlueContainer
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }

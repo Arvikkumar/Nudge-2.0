@@ -76,17 +76,6 @@ import com.example.gentlenudge.ui.components.TaskSlipItem
 import com.example.gentlenudge.ui.components.isTaskOnDateHelper
 import com.example.gentlenudge.ui.theme.ImportantDot
 import com.example.gentlenudge.ui.theme.NudgeBlue
-import com.example.gentlenudge.ui.theme.NudgeBlueContainer
-import com.example.gentlenudge.ui.theme.TagHomeBg
-import com.example.gentlenudge.ui.theme.TagHomeText
-import com.example.gentlenudge.ui.theme.TagOtherBg
-import com.example.gentlenudge.ui.theme.TagOtherText
-import com.example.gentlenudge.ui.theme.TagPersonalBg
-import com.example.gentlenudge.ui.theme.TagPersonalText
-import com.example.gentlenudge.ui.theme.TagShoppingBg
-import com.example.gentlenudge.ui.theme.TagShoppingText
-import com.example.gentlenudge.ui.theme.TagWorkBg
-import com.example.gentlenudge.ui.theme.TagWorkText
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -327,7 +316,7 @@ fun TodayScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(NudgeBlueContainer)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(

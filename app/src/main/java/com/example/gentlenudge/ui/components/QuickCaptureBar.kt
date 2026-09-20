@@ -48,7 +48,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gentlenudge.ui.theme.NudgeBlue
-import com.example.gentlenudge.ui.theme.NudgeBlueContainer
 
 @Composable
 fun QuickCaptureBar(
@@ -226,12 +225,12 @@ fun QuickCaptureBar(
                     )
                 }
 
-                // Plus button in pale blue rounded container
+                // Plus button in primary container
                 Box(
                     modifier = Modifier
                         .size(42.dp)
                         .clip(CircleShape)
-                        .background(NudgeBlueContainer)
+                        .background(MaterialTheme.colorScheme.primaryContainer)
                         .clickable {
                             if (textInput.isNotBlank()) {
                                 onQuickAdd(textInput.trim())

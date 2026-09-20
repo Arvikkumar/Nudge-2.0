@@ -68,17 +68,6 @@ import com.example.gentlenudge.data.model.NudgeTask
 import com.example.gentlenudge.data.model.TaskAttachment
 import com.example.gentlenudge.ui.theme.ImportantDot
 import com.example.gentlenudge.ui.theme.NudgeBlue
-import com.example.gentlenudge.ui.theme.NudgeBlueContainer
-import com.example.gentlenudge.ui.theme.TagHomeBg
-import com.example.gentlenudge.ui.theme.TagHomeText
-import com.example.gentlenudge.ui.theme.TagOtherBg
-import com.example.gentlenudge.ui.theme.TagOtherText
-import com.example.gentlenudge.ui.theme.TagPersonalBg
-import com.example.gentlenudge.ui.theme.TagPersonalText
-import com.example.gentlenudge.ui.theme.TagShoppingBg
-import com.example.gentlenudge.ui.theme.TagShoppingText
-import com.example.gentlenudge.ui.theme.TagWorkBg
-import com.example.gentlenudge.ui.theme.TagWorkText
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -127,7 +116,7 @@ fun TaskSlipItem(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelectionMode && isSelected) {
-                NudgeBlueContainer.copy(alpha = 0.35f)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
             } else if (task.isDone) {
                 MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
             } else {

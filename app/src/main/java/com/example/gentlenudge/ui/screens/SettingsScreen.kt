@@ -87,8 +87,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gentlenudge.backup.NudgeBackupScheduler
 import com.example.gentlenudge.ui.components.MinimalAnalogClock
+import com.example.gentlenudge.ui.components.ThemeToggleSwitch
 import com.example.gentlenudge.ui.theme.NudgeBlue
-import com.example.gentlenudge.ui.theme.NudgeBlueContainer
 import com.example.gentlenudge.widget.NudgeWidgetPinningHelper
 import java.util.Calendar
 
@@ -119,6 +119,8 @@ fun SettingsScreen(
     onSetAutoBackupSchedule: (dayOfWeek: Int, hour: Int, minute: Int) -> Unit = { _, _, _ -> },
     onResetSampleData: () -> Unit = {},
     onShowToast: (String) -> Unit,
+    isDark: Boolean = false,
+    onToggleTheme: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -153,30 +155,39 @@ fun SettingsScreen(
     ) {
         // Page Heading
         item {
-            Column(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 2.dp, bottom = 4.dp)
+                    .padding(top = 2.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Settings that",
-                    style = MaterialTheme.typography.displayMedium.copy(
-                        fontSize = 28.sp,
-                        fontFamily = FontFamily.Serif,
-                        fontWeight = FontWeight.Normal,
-                        letterSpacing = (-0.5).sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "fit your rhythm.",
-                    style = MaterialTheme.typography.displayMedium.copy(
-                        fontSize = 28.sp,
-                        fontFamily = FontFamily.Serif,
-                        fontWeight = FontWeight.Normal,
-                        letterSpacing = (-0.5).sp
-                    ),
-                    color = NudgeBlue
+                Column {
+                    Text(
+                        text = "Settings that",
+                        style = MaterialTheme.typography.displayMedium.copy(
+                            fontSize = 28.sp,
+                            fontFamily = FontFamily.Serif,
+                            fontWeight = FontWeight.Normal,
+                            letterSpacing = (-0.5).sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "fit your rhythm.",
+                        style = MaterialTheme.typography.displayMedium.copy(
+                            fontSize = 28.sp,
+                            fontFamily = FontFamily.Serif,
+                            fontWeight = FontWeight.Normal,
+                            letterSpacing = (-0.5).sp
+                        ),
+                        color = NudgeBlue
+                    )
+                }
+
+                ThemeToggleSwitch(
+                    isDark = isDark,
+                    onToggle = onToggleTheme
                 )
             }
         }
@@ -533,7 +544,7 @@ fun SettingsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(NudgeBlueContainer)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
                             .clickable {
                                 TimePickerDialog(
                                     context,
@@ -609,7 +620,7 @@ fun SettingInfoRow(
             modifier = Modifier
                 .size(38.dp)
                 .clip(CircleShape)
-                .background(NudgeBlueContainer),
+                .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -681,7 +692,7 @@ fun SettingToggleRow(
             modifier = Modifier
                 .size(38.dp)
                 .clip(CircleShape)
-                .background(NudgeBlueContainer),
+                .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -838,7 +849,7 @@ fun SettingActionRow(
             modifier = Modifier
                 .size(38.dp)
                 .clip(CircleShape)
-                .background(NudgeBlueContainer),
+                .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -877,7 +888,7 @@ fun SettingActionRow(
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(10.dp))
-                .background(NudgeBlueContainer)
+                .background(MaterialTheme.colorScheme.primaryContainer)
                 .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
             Text(
@@ -886,7 +897,7 @@ fun SettingActionRow(
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 12.sp
                 ),
-                color = NudgeBlue
+                color = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
     }

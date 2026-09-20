@@ -49,9 +49,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gentlenudge.ui.NudgeView
-import com.example.gentlenudge.ui.theme.PaperBorderLight
-import com.example.gentlenudge.ui.theme.TextSecondaryDark
-import com.example.gentlenudge.ui.theme.TextSecondaryLight
 import kotlin.math.roundToInt
 
 // Softer, lighter, and more modern Nudge blue for selected navigation button
@@ -113,17 +110,12 @@ fun NudgeCarvedBottomBar(
 
         val isDark = MaterialTheme.colorScheme.background.red < 0.5f
         val navBgColor = if (isDark) {
-            Color(0xFA1E222B)
+            Color(0xFA22201D)
         } else {
             Color(0xFAFCFBF9)
         }
-        val borderColor = if (isDark) {
-            Color(0x33FFFFFF)
-        } else {
-            PaperBorderLight.copy(alpha = 0.9f)
-        }
-
-        val unselectedColor = if (isDark) TextSecondaryDark.copy(alpha = 0.8f) else TextSecondaryLight.copy(alpha = 0.8f)
+        val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.9f)
+        val unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
 
         Box(
             modifier = Modifier

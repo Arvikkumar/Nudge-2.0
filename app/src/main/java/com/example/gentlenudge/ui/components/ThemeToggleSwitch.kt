@@ -2,7 +2,6 @@ package com.example.gentlenudge.ui.components
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -30,7 +29,6 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -68,25 +66,17 @@ fun ThemeToggleSwitch(
     val padding = (height - thumbSize) / 2
     val maxThumbOffset = width - thumbSize - padding
 
-    // Animation specifications: 90ms duration for immediate, crisp tactile response
-    val animDuration = 90
-
+    // Thumb sliding animation (190ms with FastOutSlowInEasing)
     val thumbOffsetAnim by animateDpAsState(
         targetValue = if (isDark) maxThumbOffset else padding,
-        animationSpec = tween(durationMillis = animDuration, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = 190, easing = FastOutSlowInEasing),
         label = "theme_thumb_offset"
     )
 
-    // Snap colors and element alphas immediately with the theme change to prevent muddy intermediate frames
-    val trackBgColor = if (isDark) Color(0xFF151922) else Color(0xFF508CE0)
-    val trackBorderColor = if (isDark) Color(0xFF2C3545) else Color(0xFF7EACEC)
+    // Decisive immediate appearance switch: NO muddy RGB interpolations or crossfades
+    val trackBgColor = if (isDark) Color(0xFF1C1A17) else Color(0xFF508CE0)
+    val trackBorderColor = if (isDark) Color(0xFF38332C) else Color(0xFF7EACEC)
     val thumbColor = if (isDark) Color(0xFFF0F3F6) else Color(0xFFFFCA28)
-
-    val thumbRotation by animateFloatAsState(
-        targetValue = if (isDark) 360f else 0f,
-        animationSpec = tween(durationMillis = animDuration, easing = FastOutSlowInEasing),
-        label = "theme_thumb_rotation"
-    )
 
     val darkAlpha = if (isDark) 1f else 0f
     val lightAlpha = if (isDark) 0f else 1f
@@ -243,9 +233,6 @@ fun ThemeToggleSwitch(
                         )
                     }
                     .size(thumbSize)
-                    .graphicsLayer {
-                        rotationZ = thumbRotation
-                    }
                     .shadow(
                         elevation = if (isDark) 1.5.dp else 2.5.dp,
                         shape = CircleShape,

@@ -34,8 +34,8 @@ val LightColorScheme = lightColorScheme(
 val DarkColorScheme = darkColorScheme(
     primary = NudgeBlueLight,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFF1C2D5A),
-    onPrimaryContainer = Color(0xFFB0C6FF),
+    primaryContainer = Color(0xFF1F263B),
+    onPrimaryContainer = Color(0xFFB8CEFF),
     secondary = Color(0xFF9EACB8),
     onSecondary = Color.White,
     secondaryContainer = Color(0xFF263328),
@@ -45,10 +45,10 @@ val DarkColorScheme = darkColorScheme(
     onBackground = TextPrimaryDark,
     surface = PaperCardDark,
     onSurface = TextPrimaryDark,
-    surfaceVariant = Color(0xFF282520),
+    surfaceVariant = Color(0xFF2A2723),
     onSurfaceVariant = TextSecondaryDark,
     outline = PaperBorderDark,
-    outlineVariant = Color(0xFF3D3932)
+    outlineVariant = Color(0xFF49433B)
 )
 
 @Composable
