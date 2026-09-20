@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path name="pdf_cache" path="exports/" />
+    <files-path name="pdf_files" path="exports/" />
+    <files-path name="hours_pdf_files" path="hours_exports/" />
+    <files-path name="attachments" path="attachments/" />
+    <cache-path name="cache_root" path="." />
+    <files-path name="files_root" path="." />
+</paths>

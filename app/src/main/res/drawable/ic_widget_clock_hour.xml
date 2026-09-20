@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="2000dp"
+    android:height="2000dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+    <!-- Hour Hand (Length = 50 units, stroke = 1.8 units, #8E8E93 @ 0.65 opacity = #A68E8E93, pointing up at 12 o'clock) -->
+    <path
+        android:strokeColor="#A68E8E93"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:pathData="M 100,100 L 100,50" />
+
+</vector>

@@ -1,11 +1,18 @@
-<div align="center">
+# Nudge (Android)
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+A quiet, warm, private reminder and memory assistant built with Kotlin and Jetpack Compose.
 
-  <h1>Built with AI Studio</h2>
+## Design Philosophy — Paper Morning
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+Inspired by letterpress stationery and warm editorial modernism, Nudge turns daily reminders into calm, human-sized moments rather than urgent productivity metrics.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+### Core Features
 
-</div>
+- **Today Focus:** Morning greeting card, Quick Capture bar, Next Nudge spotlight, and today's gentle task slips.
+- **Hands-Free Voice Capture:** Speak naturally to dictate a new nudge with speech recognition support.
+- **Your Notes (Search & Filter):** Search across all nudges, people, places, and filter by contextual category tags (Personal, Home, Work, Shopping, Other).
+- **Remembered (History):** Celebrate small daily wins with completed task archives and weekly completion count.
+- **Gentle Controls & Snooze:** Snooze nudges in 30 minutes, tonight, or tomorrow with soft confirmation feedback.
+- **Private by Default:** All tasks and settings persist locally using an offline Room SQLite database.
+- **Backup & Restore:** Full JSON export, import, and sample data restoration.
+- **Adaptive Dark Mode:** Restful contrast styling for quiet evenings.

@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Nudge</string>
+    <string name="widget_clock_label">Nudge Clock</string>
+    <string name="widget_clock_description">Minimal analog clock from Nudge</string>
+    <string name="widget_clock_content_description">Nudge analog clock</string>
+    <string name="widget_pin_fallback_message">Your home screen launcher does not support direct pinning. You can add the Nudge Clock via your home screen\'s Widgets menu.</string>
+</resources>

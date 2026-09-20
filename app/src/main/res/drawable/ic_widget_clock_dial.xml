@@ -1,0 +1,81 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="2000dp"
+    android:height="2000dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+    <!-- 12 Tick Marks (Outer radius 72, Inner radius 64, stroke 1.3, color #918E8E93) -->
+    <!-- 12 o'clock (0 deg) -->
+    <path
+        android:strokeColor="#918E8E93"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:pathData="M 100,36 L 100,28" />
+    <!-- 1 o'clock (30 deg) -->
+    <path
+        android:strokeColor="#918E8E93"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:pathData="M 132.00,44.57 L 136.00,37.65" />
+    <!-- 2 o'clock (60 deg) -->
+    <path
+        android:strokeColor="#918E8E93"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:pathData="M 155.43,68.00 L 162.35,64.00" />
+    <!-- 3 o'clock (90 deg) -->
+    <path
+        android:strokeColor="#918E8E93"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:pathData="M 164,100 L 172,100" />
+    <!-- 4 o'clock (120 deg) -->
+    <path
+        android:strokeColor="#918E8E93"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:pathData="M 155.43,132.00 L 162.35,136.00" />
+    <!-- 5 o'clock (150 deg) -->
+    <path
+        android:strokeColor="#918E8E93"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:pathData="M 132.00,155.43 L 136.00,162.35" />
+    <!-- 6 o'clock (180 deg) -->
+    <path
+        android:strokeColor="#918E8E93"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:pathData="M 100,164 L 100,172" />
+    <!-- 7 o'clock (210 deg) -->
+    <path
+        android:strokeColor="#918E8E93"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:pathData="M 68.00,155.43 L 64.00,162.35" />
+    <!-- 8 o'clock (240 deg) -->
+    <path
+        android:strokeColor="#918E8E93"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:pathData="M 44.57,132.00 L 37.65,136.00" />
+    <!-- 9 o'clock (270 deg) -->
+    <path
+        android:strokeColor="#918E8E93"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:pathData="M 36,100 L 28,100" />
+    <!-- 10 o'clock (300 deg) -->
+    <path
+        android:strokeColor="#918E8E93"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:pathData="M 44.57,68.00 L 37.65,64.00" />
+    <!-- 11 o'clock (330 deg) -->
+    <path
+        android:strokeColor="#918E8E93"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:pathData="M 68.00,44.57 L 64.00,37.65" />
+
+</vector>

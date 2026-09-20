@@ -1,0 +1,6 @@
+{
+  "name": "Nudge",
+  "description": "A quiet, warm, private reminder and memory assistant to gently keep track of life's little things without stress.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,49 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Minimal monochrome sprout/leaf outline icon -->
+    <!-- Central vertical stem -->
+    <path
+        android:strokeColor="#2E62F6"
+        android:strokeWidth="1.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,21 L12,7" />
+    <!-- Top central leaf bud -->
+    <path
+        android:strokeColor="#2E62F6"
+        android:strokeWidth="1.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,7 C10.8,4.8 11.2,3 12,3 C12.8,3 13.2,4.8 12,7 Z" />
+    <!-- Upper-left leaf -->
+    <path
+        android:strokeColor="#2E62F6"
+        android:strokeWidth="1.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,11 C9.5,10.2 7,10.8 7,12.5 C7,14 9.5,13.8 12,12.5" />
+    <!-- Upper-right leaf -->
+    <path
+        android:strokeColor="#2E62F6"
+        android:strokeWidth="1.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,11 C14.5,10.2 17,10.8 17,12.5 C17,14 14.5,13.8 12,12.5" />
+    <!-- Lower-left leaf -->
+    <path
+        android:strokeColor="#2E62F6"
+        android:strokeWidth="1.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,15.5 C8.8,14.5 6,15.2 6,17.2 C6,19 8.8,18.8 12,17" />
+    <!-- Lower-right leaf -->
+    <path
+        android:strokeColor="#2E62F6"
+        android:strokeWidth="1.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,15.5 C15.2,14.5 18,15.2 18,17.2 C18,19 15.2,18.8 12,17" />
+</vector>

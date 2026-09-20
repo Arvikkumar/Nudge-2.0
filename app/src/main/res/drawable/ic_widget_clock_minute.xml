@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="2000dp"
+    android:height="2000dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+    <!-- Minute Hand (Length = 70 units, stroke = 1.2 units, #8E8E93 @ 0.60 opacity = #998E8E93, pointing up at 12 o'clock) -->
+    <path
+        android:strokeColor="#998E8E93"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M 100,100 L 100,30" />
+
+    <!-- Center Pivot Dot (Radius = 2.2 units, #3B82F6 @ 0.70 opacity = #B33B82F6) fallback for API < 31 -->
+    <path
+        android:fillColor="#B33B82F6"
+        android:pathData="M 100,100 m -2.2,0 a 2.2,2.2 0 1,0 4.4,0 a 2.2,2.2 0 1,0 -4.4,0" />
+
+</vector>
