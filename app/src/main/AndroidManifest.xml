@@ -100,6 +100,27 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/nudge_clock_widget_info" />
         </receiver>
+
+        <!-- Nudge Deep Dive Home-Screen Widget -->
+        <receiver
+            android:name=".widget.DeepDiveWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_deep_dive_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.gentlenudge.ACTION_START_DEEP_DIVE_30" />
+                <action android:name="com.example.gentlenudge.ACTION_START_DEEP_DIVE_60" />
+                <action android:name="com.example.gentlenudge.ACTION_STOP_DEEP_DIVE" />
+                <action android:name="com.example.gentlenudge.ACTION_UPDATE_DEEP_DIVE_WIDGET" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/nudge_deep_dive_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

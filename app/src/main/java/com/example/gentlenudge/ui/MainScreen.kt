@@ -170,6 +170,15 @@ fun MainScreen(
 
     var activeView by remember { mutableStateOf(NudgeView.TODAY) }
     var showRecentlyDeleted by remember { mutableStateOf(false) }
+
+    val requestOpenConfig by com.example.gentlenudge.deepdive.DeepDiveManager.requestOpenConfig.collectAsStateWithLifecycle()
+    val requestOpenActiveDetail by com.example.gentlenudge.deepdive.DeepDiveManager.requestOpenActiveDetail.collectAsStateWithLifecycle()
+    LaunchedEffect(requestOpenConfig, requestOpenActiveDetail) {
+        if (requestOpenConfig || requestOpenActiveDetail) {
+            activeView = NudgeView.NOTES
+            showRecentlyDeleted = false
+        }
+    }
     var composerOpen by remember { mutableStateOf(false) }
     var showEditNameDialog by remember { mutableStateOf(false) }
     var editingTask by remember { mutableStateOf<NudgeTask?>(null) }

@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleIntent(intent)
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
                 android.graphics.Color.TRANSPARENT,
@@ -83,6 +84,29 @@ class MainActivity : ComponentActivity() {
             com.example.gentlenudge.notification.NudgeEventNotificationScheduler.rescheduleIfEnabled(this)
         } catch (e: Exception) {
             android.util.Log.e("MainActivity", "Failed to re-evaluate event reminders: ${e.message}")
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: android.content.Intent?) {
+        if (intent == null) return
+        val isOpenConfig = intent.getBooleanExtra("EXTRA_OPEN_DEEP_DIVE_CONFIG", false) ||
+            intent.action == "com.example.gentlenudge.ACTION_OPEN_DEEP_DIVE_CONFIG"
+        if (isOpenConfig) {
+            com.example.gentlenudge.deepdive.DeepDiveManager.init(this)
+            val state = com.example.gentlenudge.deepdive.DeepDiveManager.state.value
+            val now = System.currentTimeMillis()
+            val targetSection = intent.getStringExtra("EXTRA_CONFIG_SECTION")
+            if (state.isActive && state.endTimeMillis > now) {
+                com.example.gentlenudge.deepdive.DeepDiveManager.requestOpenActiveDetailSheet()
+            } else {
+                com.example.gentlenudge.deepdive.DeepDiveManager.requestOpenConfigSheet(targetSection)
+            }
         }
     }
 }

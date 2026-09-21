@@ -1,6 +1,7 @@
 package com.example.gentlenudge.ui.components
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -9,6 +10,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -17,11 +21,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -30,6 +38,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Remove
@@ -58,6 +67,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SheetState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,6 +75,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -74,10 +85,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.painterResource
@@ -87,9 +110,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.example.gentlenudge.R
 import com.example.gentlenudge.deepdive.DeepDiveManager
+import com.example.gentlenudge.widget.NudgeWidgetPinningHelper
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -104,11 +130,38 @@ fun DeepDiveCard(
     state: DeepDiveManager.DeepDiveState,
     onStartSession: (endTimeMillis: Long, style: String) -> Unit,
     onEndSession: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isFloating: Boolean = false,
+    isMoveMode: Boolean = false,
+    onEnterMoveMode: () -> Unit = {},
+    onDoneMoveMode: () -> Unit = {},
+    onResetPosition: () -> Unit = {},
+    onDragDelta: (Offset) -> Unit = {},
+    onDragEnd: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showConfigSheet by remember { mutableStateOf(false) }
+    var initialTargetSection by remember { mutableStateOf<String?>(null) }
     var showActiveDetailSheet by remember { mutableStateOf(false) }
+
+    val requestOpenConfig by DeepDiveManager.requestOpenConfig.collectAsStateWithLifecycle()
+    val configTargetSection by DeepDiveManager.configTargetSection.collectAsStateWithLifecycle()
+    val requestOpenActiveDetail by DeepDiveManager.requestOpenActiveDetail.collectAsStateWithLifecycle()
+
+    LaunchedEffect(requestOpenConfig) {
+        if (requestOpenConfig) {
+            initialTargetSection = configTargetSection
+            showConfigSheet = true
+            DeepDiveManager.clearOpenConfigRequest()
+        }
+    }
+
+    LaunchedEffect(requestOpenActiveDetail) {
+        if (requestOpenActiveDetail) {
+            showActiveDetailSheet = true
+            DeepDiveManager.clearOpenActiveDetailRequest()
+        }
+    }
 
     // Live tick for remaining time when active
     var currentTimeMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -126,44 +179,254 @@ fun DeepDiveCard(
 
     val isActuallyActive = state.isActive && state.endTimeMillis > currentTimeMillis
 
+    val haptic = LocalHapticFeedback.current
+    val viewConfig = LocalViewConfiguration.current
+
+    val positionState by DeepDiveManager.positionState.collectAsStateWithLifecycle()
+    var isDragging by remember { mutableStateOf(false) }
+
+    val gestureModifier = Modifier.pointerInput(isMoveMode) {
+        val touchSlop = viewConfig.touchSlop
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false)
+            if (isMoveMode) {
+                // In Move Mode: drag begins as soon as finger moves past touchSlop
+                var prevPosition = down.position
+                var hasExceededSlop = false
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Main)
+                    val change = event.changes.firstOrNull { it.id == down.id }
+                    if (change == null || !change.pressed) {
+                        break
+                    }
+                    val currentPos = change.position
+                    val dist = (currentPos - down.position).getDistance()
+                    if (!hasExceededSlop && dist > touchSlop) {
+                        hasExceededSlop = true
+                        isDragging = true
+                    }
+                    if (hasExceededSlop) {
+                        change.consume()
+                        val delta = currentPos - prevPosition
+                        onDragDelta(delta)
+                    }
+                    prevPosition = currentPos
+                }
+                if (hasExceededSlop) {
+                    isDragging = false
+                    onDragEnd()
+                }
+            } else {
+                // Normal Mode: Differentiate quick tap vs ~2000ms continuous hold vs list scroll
+                val downPosition = down.position
+                var fingerReleasedBeforeTimeout = false
+                var movedBeyondSlop = false
+                var lastChange = down
+
+                try {
+                    withTimeout(2000L) {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Main)
+                            val change = event.changes.firstOrNull { it.id == down.id }
+                            if (change == null || !change.pressed) {
+                                fingerReleasedBeforeTimeout = true
+                                if (change != null) lastChange = change
+                                break
+                            }
+                            lastChange = change
+                            val dist = (change.position - downPosition).getDistance()
+                            if (dist > touchSlop) {
+                                movedBeyondSlop = true
+                                break
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    // ~2000ms continuous hold reached!
+                }
+
+                if (!fingerReleasedBeforeTimeout && !movedBeyondSlop) {
+                    // 2-second continuous hold threshold satisfied -> trigger haptic & enter Move Mode!
+                    lastChange.consume()
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onEnterMoveMode()
+
+                    // Continue tracking drag immediately if finger is still down!
+                    var prevPosition = lastChange.position
+                    var didDrag = false
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Main)
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        if (change == null || !change.pressed) {
+                            break
+                        }
+                        change.consume()
+                        val currentPos = change.position
+                        val delta = currentPos - prevPosition
+                        prevPosition = currentPos
+                        didDrag = true
+                        isDragging = true
+                        onDragDelta(delta)
+                    }
+                    if (didDrag) {
+                        isDragging = false
+                        onDragEnd()
+                    }
+                } else if (fingerReleasedBeforeTimeout && !movedBeyondSlop) {
+                    // Normal tap released before 2 seconds!
+                    if (isActuallyActive) {
+                        showActiveDetailSheet = true
+                    } else {
+                        showConfigSheet = true
+                    }
+                } else {
+                    // Moved beyond touch slop before 2s -> normal vertical scrolling in LazyColumn!
+                    // Events left unconsumed so parent scrolls freely.
+                }
+            }
+        }
+    }
+
     Card(
         modifier = modifier
-            .fillMaxWidth()
             .testTag("deep_dive_card")
+            .graphicsLayer {
+                val targetScale = if (isMoveMode) 1.02f else 1f
+                this.scaleX = targetScale
+                this.scaleY = targetScale
+            }
             .clip(RoundedCornerShape(18.dp))
-            .clickable {
-                if (isActuallyActive) {
-                    showActiveDetailSheet = true
-                } else {
-                    showConfigSheet = true
-                }
-            },
+            .then(gestureModifier),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isActuallyActive) {
+            containerColor = if (isMoveMode) {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+            } else if (isActuallyActive) {
                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
             } else {
                 MaterialTheme.colorScheme.surface
             }
         ),
-        border = if (isActuallyActive) {
-            BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
-        } else {
-            CardDefaults.outlinedCardBorder().copy(
+        border = when {
+            isMoveMode -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+            isActuallyActive -> BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+            else -> CardDefaults.outlinedCardBorder().copy(
                 brush = SolidColor(MaterialTheme.colorScheme.outline),
                 width = 1.dp
             )
         },
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isDragging) 8.dp else if (isMoveMode || isFloating) 4.dp else 0.dp
+        )
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (isMoveMode) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Drag handle dots
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            repeat(3) {
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(3.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary)
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(3.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary)
+                                    )
+                                }
+                            }
+                        }
+
+                        Text(
+                            text = "Move Mode · Drag to reposition",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 11.5.sp
+                            ),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (positionState.hasCustomPosition || isFloating || isMoveMode) {
+                            Surface(
+                                onClick = onResetPosition,
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.testTag("deep_dive_move_mode_reset")
+                            ) {
+                                Text(
+                                    text = "Reset",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 11.sp
+                                    ),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+
+                        Surface(
+                            onClick = onDoneMoveMode,
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.testTag("deep_dive_move_mode_done")
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = "Done",
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = "Done",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(3.dp)
@@ -267,14 +530,20 @@ fun DeepDiveCard(
             }
         }
     }
+}
 
     // Sheet to configure and start Deep Dive
     if (showConfigSheet) {
         DeepDiveConfigSheet(
             initialStyle = state.notificationStyle,
-            onDismiss = { showConfigSheet = false },
+            targetSection = initialTargetSection,
+            onDismiss = {
+                showConfigSheet = false
+                initialTargetSection = null
+            },
             onConfirmStart = { endTimeMillis, selectedStyle ->
                 showConfigSheet = false
+                initialTargetSection = null
                 onStartSession(endTimeMillis, selectedStyle)
             }
         )
@@ -302,6 +571,7 @@ fun DeepDiveConfigSheet(
     initialStyle: String,
     onDismiss: () -> Unit,
     onConfirmStart: (Long, String) -> Unit,
+    targetSection: String? = null,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
     val context = LocalContext.current
@@ -341,6 +611,10 @@ fun DeepDiveConfigSheet(
         mutableStateOf(if (initialStyle.equals("Full Ringtone", ignoreCase = true)) "Full Ringtone" else "One Shot")
     }
 
+    LaunchedEffect(selectedNotificationStyle) {
+        DeepDiveManager.saveNotificationStyle(context, selectedNotificationStyle)
+    }
+
     // Reminders State
     data class ReminderItem(
         val id: String,
@@ -349,11 +623,26 @@ fun DeepDiveConfigSheet(
         val subLabel: String? = null,
         val offsetMinutes: Int? = null
     )
-    var selectedReminders by remember { mutableStateOf<List<ReminderItem>>(emptyList()) }
-    var showAddReminderDialog by remember { mutableStateOf(false) }
-    var showCustomReminderDurationDialog by remember { mutableStateOf(false) }
-    var tempReminderHours by remember { mutableIntStateOf(0) }
-    var tempReminderMinutes by remember { mutableIntStateOf(15) }
+    val initialConfiguredReminders = remember { DeepDiveManager.getConfiguredReminders(context) }
+    var selectedReminders by remember {
+        val now = System.currentTimeMillis()
+        val initialEnd = now + (30 * 60 * 1000L)
+        val initialItems = initialConfiguredReminders.map { item ->
+            val trigger = when {
+                item.triggerOffsetFromEndMillis != null -> initialEnd - item.triggerOffsetFromEndMillis
+                item.offsetMinutes != null -> initialEnd - (item.offsetMinutes * 60 * 1000L)
+                else -> initialEnd - (15 * 60 * 1000L)
+            }
+            ReminderItem(
+                id = item.id,
+                triggerMillis = trigger,
+                label = item.label,
+                subLabel = item.subLabel,
+                offsetMinutes = item.offsetMinutes
+            )
+        }
+        mutableStateOf(initialItems)
+    }
 
     // Function to calculate target time based on selected duration
     fun calculateTargetMillis(): Long {
@@ -368,6 +657,27 @@ fun DeepDiveConfigSheet(
             else -> now + (30 * 60 * 1000L)
         }
     }
+
+    LaunchedEffect(selectedReminders) {
+        val currentEnd = calculateTargetMillis()
+        val listToSave = selectedReminders.map { item ->
+            val offsetFromEnd = if (item.triggerMillis in 1 until currentEnd) {
+                currentEnd - item.triggerMillis
+            } else null
+            DeepDiveManager.ConfiguredReminderItem(
+                id = item.id,
+                label = item.label,
+                subLabel = item.subLabel,
+                offsetMinutes = item.offsetMinutes,
+                triggerOffsetFromEndMillis = offsetFromEnd
+            )
+        }
+        DeepDiveManager.saveConfiguredReminders(context, listToSave)
+    }
+    var showAddReminderDialog by remember { mutableStateOf(false) }
+    var showCustomReminderDurationDialog by remember { mutableStateOf(false) }
+    var tempReminderHours by remember { mutableIntStateOf(0) }
+    var tempReminderMinutes by remember { mutableIntStateOf(15) }
 
     // Prune and recalculate reminders if the duration changes
     LaunchedEffect(selectedOption, customDurationMinutes) {
@@ -392,6 +702,12 @@ fun DeepDiveConfigSheet(
     }
 
     val scrollState = rememberScrollState()
+    LaunchedEffect(targetSection) {
+        if (targetSection == "sound" || targetSection == "notification") {
+            delay(150)
+            scrollState.animateScrollTo(scrollState.maxValue)
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,

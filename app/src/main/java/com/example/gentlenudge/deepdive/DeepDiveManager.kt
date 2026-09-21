@@ -15,6 +15,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.example.gentlenudge.MainActivity
 import com.example.gentlenudge.notification.NudgeNotificationHelper
 import com.example.gentlenudge.notification.NudgeNotificationReceiver
+import com.example.gentlenudge.widget.DeepDiveWidgetProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,6 +36,10 @@ object DeepDiveManager {
     private const val KEY_END_TIME_MILLIS = "deep_dive_end_time_millis"
     private const val KEY_STYLE = "deep_dive_notification_style"
     private const val KEY_REMINDER_POINTS = "deep_dive_reminder_points"
+    private const val KEY_CONFIGURED_REMINDERS = "deep_dive_configured_reminders"
+    private const val KEY_CUSTOM_POSITION_ACTIVE = "deep_dive_custom_position_active"
+    private const val KEY_POSITION_X_RATIO = "deep_dive_position_x_ratio"
+    private const val KEY_POSITION_Y_RATIO = "deep_dive_position_y_ratio"
     private const val DEFAULT_STYLE = "One Shot" // "One Shot" or "Full Ringtone"
 
     const val DEEP_DIVE_ALARM_REQUEST_CODE = 998877
@@ -54,6 +59,14 @@ object DeepDiveManager {
         val label: String
     )
 
+    data class ConfiguredReminderItem(
+        val id: String,
+        val label: String,
+        val subLabel: String? = null,
+        val offsetMinutes: Int? = null,
+        val triggerOffsetFromEndMillis: Long? = null
+    )
+
     data class DeepDiveState(
         val isActive: Boolean = false,
         val endTimeMillis: Long = 0L,
@@ -61,8 +74,44 @@ object DeepDiveManager {
         val reminderPoints: List<ReminderPoint> = emptyList()
     )
 
+    data class DeepDivePosition(
+        val hasCustomPosition: Boolean = false,
+        val xRatio: Float = 0f,
+        val yRatio: Float = 0f
+    )
+
     private val _state = MutableStateFlow(DeepDiveState())
     val state: StateFlow<DeepDiveState> = _state.asStateFlow()
+
+    private val _positionState = MutableStateFlow(DeepDivePosition())
+    val positionState: StateFlow<DeepDivePosition> = _positionState.asStateFlow()
+
+    private val _requestOpenConfig = MutableStateFlow(false)
+    val requestOpenConfig: StateFlow<Boolean> = _requestOpenConfig.asStateFlow()
+
+    private val _configTargetSection = MutableStateFlow<String?>(null)
+    val configTargetSection: StateFlow<String?> = _configTargetSection.asStateFlow()
+
+    private val _requestOpenActiveDetail = MutableStateFlow(false)
+    val requestOpenActiveDetail: StateFlow<Boolean> = _requestOpenActiveDetail.asStateFlow()
+
+    fun requestOpenConfigSheet(targetSection: String? = null) {
+        _configTargetSection.value = targetSection
+        _requestOpenConfig.value = true
+    }
+
+    fun clearOpenConfigRequest() {
+        _requestOpenConfig.value = false
+        _configTargetSection.value = null
+    }
+
+    fun requestOpenActiveDetailSheet() {
+        _requestOpenActiveDetail.value = true
+    }
+
+    fun clearOpenActiveDetailRequest() {
+        _requestOpenActiveDetail.value = false
+    }
 
     private var _pendingReminders: List<ReminderPoint> = emptyList()
 
@@ -78,6 +127,71 @@ object DeepDiveManager {
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
+    fun saveConfiguredReminders(context: Context, reminders: List<ConfiguredReminderItem>) {
+        val array = JSONArray()
+        for (r in reminders) {
+            val obj = JSONObject().apply {
+                put("id", r.id)
+                put("label", r.label)
+                r.subLabel?.let { put("subLabel", it) }
+                r.offsetMinutes?.let { put("offsetMinutes", it) }
+                r.triggerOffsetFromEndMillis?.let { put("triggerOffsetFromEndMillis", it) }
+            }
+            array.put(obj)
+        }
+        getPrefs(context).edit().putString(KEY_CONFIGURED_REMINDERS, array.toString()).apply()
+        DeepDiveWidgetProvider.updateAllWidgets(context)
+    }
+
+    fun getConfiguredReminders(context: Context): List<ConfiguredReminderItem> {
+        val json = getPrefs(context).getString(KEY_CONFIGURED_REMINDERS, null) ?: return emptyList()
+        val list = mutableListOf<ConfiguredReminderItem>()
+        try {
+            val array = JSONArray(json)
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                list.add(
+                    ConfiguredReminderItem(
+                        id = obj.getString("id"),
+                        label = obj.getString("label"),
+                        subLabel = if (obj.has("subLabel")) obj.getString("subLabel") else null,
+                        offsetMinutes = if (obj.has("offsetMinutes")) obj.getInt("offsetMinutes") else null,
+                        triggerOffsetFromEndMillis = if (obj.has("triggerOffsetFromEndMillis")) obj.getLong("triggerOffsetFromEndMillis") else null
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse configured reminders: ${e.message}")
+        }
+        return list
+    }
+
+    fun getConfiguredRemindersCount(context: Context): Int {
+        return getConfiguredReminders(context).size
+    }
+
+    fun formatRemindersCountLabel(count: Int): String {
+        return when (count) {
+            0 -> "🔔 No reminders"
+            1 -> "🔔 1 reminder"
+            else -> "🔔 $count reminders"
+        }
+    }
+
+    fun saveNotificationStyle(context: Context, style: String) {
+        getPrefs(context).edit().putString(KEY_STYLE, style).apply()
+        _state.value = _state.value.copy(notificationStyle = style)
+        DeepDiveWidgetProvider.updateAllWidgets(context)
+    }
+
+    fun formatNotificationStyleLabel(style: String): String {
+        return if (style.equals("Full Ringtone", ignoreCase = true)) {
+            "♪ Full Ringtone"
+        } else {
+            "♪ One Shot"
+        }
     }
 
     private fun serializeReminders(reminders: List<ReminderPoint>): String {
@@ -143,6 +257,42 @@ object DeepDiveManager {
                 reminderPoints = emptyList()
             )
         }
+
+        // Restore saved custom position if present
+        _positionState.value = getSavedPosition(context)
+    }
+
+    fun savePositionRatios(context: Context, xRatio: Float, yRatio: Float) {
+        val clampedX = xRatio.coerceIn(0f, 1f)
+        val clampedY = yRatio.coerceIn(0f, 1f)
+        getPrefs(context).edit()
+            .putBoolean(KEY_CUSTOM_POSITION_ACTIVE, true)
+            .putFloat(KEY_POSITION_X_RATIO, clampedX)
+            .putFloat(KEY_POSITION_Y_RATIO, clampedY)
+            .apply()
+        _positionState.value = DeepDivePosition(
+            hasCustomPosition = true,
+            xRatio = clampedX,
+            yRatio = clampedY
+        )
+    }
+
+    fun clearCustomPosition(context: Context) {
+        getPrefs(context).edit()
+            .remove(KEY_CUSTOM_POSITION_ACTIVE)
+            .remove(KEY_POSITION_X_RATIO)
+            .remove(KEY_POSITION_Y_RATIO)
+            .apply()
+        _positionState.value = DeepDivePosition()
+    }
+
+    fun getSavedPosition(context: Context): DeepDivePosition {
+        val prefs = getPrefs(context)
+        val hasCustom = prefs.getBoolean(KEY_CUSTOM_POSITION_ACTIVE, false)
+        if (!hasCustom) return DeepDivePosition()
+        val x = prefs.getFloat(KEY_POSITION_X_RATIO, 0f).coerceIn(0f, 1f)
+        val y = prefs.getFloat(KEY_POSITION_Y_RATIO, 0f).coerceIn(0f, 1f)
+        return DeepDivePosition(hasCustomPosition = true, xRatio = x, yRatio = y)
     }
 
     fun getSavedNotificationStyle(context: Context): String {
@@ -160,7 +310,25 @@ object DeepDiveManager {
         reminders: List<ReminderPoint> = consumePendingReminders()
     ) {
         val now = System.currentTimeMillis()
-        val validReminders = reminders
+        val effectiveReminders = if (reminders.isNotEmpty()) {
+            reminders
+        } else {
+            val configured = getConfiguredReminders(context)
+            configured.mapNotNull { item ->
+                val trigger = when {
+                    item.triggerOffsetFromEndMillis != null -> targetEndTimeMillis - item.triggerOffsetFromEndMillis
+                    item.offsetMinutes != null -> targetEndTimeMillis - (item.offsetMinutes * 60 * 1000L)
+                    else -> null
+                }
+                if (trigger != null && trigger > now && trigger < targetEndTimeMillis) {
+                    ReminderPoint(triggerTimeMillis = trigger, label = item.label)
+                } else {
+                    null
+                }
+            }
+        }
+
+        val validReminders = effectiveReminders
             .filter { it.triggerTimeMillis > now && it.triggerTimeMillis < targetEndTimeMillis }
             .distinctBy { it.triggerTimeMillis }
             .sortedBy { it.triggerTimeMillis }
@@ -189,6 +357,9 @@ object DeepDiveManager {
         for ((index, reminder) in validReminders.withIndex()) {
             scheduleReminderAlarm(context, reminder.triggerTimeMillis, reminder.label, notificationStyle, index)
         }
+
+        // Notify home-screen widgets of active state
+        DeepDiveWidgetProvider.updateAllWidgets(context)
     }
 
     /**
@@ -210,6 +381,9 @@ object DeepDiveManager {
             endTimeMillis = 0L,
             reminderPoints = emptyList()
         )
+
+        // Notify home-screen widgets of idle state
+        DeepDiveWidgetProvider.updateAllWidgets(context)
     }
 
     private fun scheduleAlarm(context: Context, triggerAtMillis: Long, style: String) {
@@ -350,6 +524,9 @@ object DeepDiveManager {
                 .remove(KEY_REMINDER_POINTS)
                 .apply()
         }
+
+        // Notify home-screen widgets of restored or cleared state on boot
+        DeepDiveWidgetProvider.updateAllWidgets(context)
     }
 
     /**
@@ -395,6 +572,9 @@ object DeepDiveManager {
             endTimeMillis = 0L,
             reminderPoints = emptyList()
         )
+
+        // Notify home-screen widgets of completion
+        DeepDiveWidgetProvider.updateAllWidgets(context)
 
         // Show the notification according to selected style
         showNotification(context, style)

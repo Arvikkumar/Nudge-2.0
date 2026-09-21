@@ -65,4 +65,37 @@ object NudgeWidgetPinningHelper {
         }
         return false
     }
+
+    fun requestPinDeepDiveWidget(
+        context: Context,
+        onFallbackMessage: ((String) -> Unit)? = null
+    ): Boolean {
+        val fallbackText = try {
+            context.getString(R.string.widget_deep_dive_pin_fallback_message)
+        } catch (e: Exception) {
+            "Your home screen launcher does not support direct pinning. You can add Nudge Deep Dive via your home screen's Widgets menu."
+        }
+        try {
+            val appWidgetManager = context.getSystemService(AppWidgetManager::class.java)
+                ?: AppWidgetManager.getInstance(context)
+
+            if (appWidgetManager != null && appWidgetManager.isRequestPinAppWidgetSupported) {
+                val provider = ComponentName(context, DeepDiveWidgetProvider::class.java)
+                val success = appWidgetManager.requestPinAppWidget(provider, null, null)
+                if (success) {
+                    return true
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error while requesting Deep Dive widget pinning: ${e.message}", e)
+        }
+
+        // Fallback when unsupported or request failed
+        if (onFallbackMessage != null) {
+            onFallbackMessage(fallbackText)
+        } else {
+            Toast.makeText(context, fallbackText, Toast.LENGTH_LONG).show()
+        }
+        return false
+    }
 }

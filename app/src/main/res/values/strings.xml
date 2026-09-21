@@ -4,4 +4,7 @@
     <string name="widget_clock_description">Minimal analog clock from Nudge</string>
     <string name="widget_clock_content_description">Nudge analog clock</string>
     <string name="widget_pin_fallback_message">Your home screen launcher does not support direct pinning. You can add the Nudge Clock via your home screen\'s Widgets menu.</string>
+    <string name="widget_deep_dive_label">Nudge Deep Dive</string>
+    <string name="widget_deep_dive_description">Quick focus shortcut and live countdown from Nudge</string>
+    <string name="widget_deep_dive_pin_fallback_message">Your home screen launcher does not support direct pinning. You can add Nudge Deep Dive via your home screen\'s Widgets menu.</string>
 </resources>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_deep_dive_description"
+    android:initialLayout="@layout/widget_deep_dive"
+    android:maxResizeHeight="280dp"
+    android:maxResizeWidth="400dp"
+    android:minHeight="100dp"
+    android:minWidth="200dp"
+    android:previewImage="@drawable/ic_widget_deep_dive_preview"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="2"
+    android:targetCellWidth="3"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />
