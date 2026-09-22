@@ -37,7 +37,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="DEEP DIVE"
-                    android:textColor="#1C1A17"
+                    android:textColor="#FFFFFF"
                     android:textSize="13.5sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.06" />
@@ -48,7 +48,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="Choose a moment, make it yours."
-                    android:textColor="#756F67"
+                    android:textColor="#FFFFFF"
                     android:textSize="11.5sp"
                     android:maxLines="1"
                     android:ellipsize="end" />
@@ -85,27 +85,27 @@
             <TextView
                 android:id="@+id/widget_btn_30min"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="32dp"
                 android:background="@drawable/bg_widget_pill_button"
                 android:gravity="center"
-                android:paddingLeft="14dp"
-                android:paddingRight="14dp"
+                android:paddingLeft="13dp"
+                android:paddingRight="13dp"
                 android:text="30 min"
-                android:textColor="#1C1A17"
+                android:textColor="#FFFFFF"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/widget_btn_1hour"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="32dp"
                 android:layout_marginLeft="8dp"
                 android:background="@drawable/bg_widget_pill_button"
                 android:gravity="center"
-                android:paddingLeft="14dp"
-                android:paddingRight="14dp"
+                android:paddingLeft="13dp"
+                android:paddingRight="13dp"
                 android:text="1 hour"
-                android:textColor="#1C1A17"
+                android:textColor="#FFFFFF"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -117,15 +117,15 @@
             <!-- Circular Quick-Start Play Button -->
             <FrameLayout
                 android:id="@+id/widget_btn_quick_play"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:background="@drawable/bg_widget_circle_blue">
 
                 <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:layout_gravity="center"
-                    android:layout_marginLeft="2dp"
+                    android:layout_marginLeft="1.5dp"
                     android:src="@drawable/ic_widget_play"
                     android:contentDescription="Start Deep Dive" />
             </FrameLayout>
@@ -160,7 +160,8 @@
                 android:paddingBottom="2dp"
                 android:paddingRight="8dp"
                 android:text="🔔 No reminders"
-                android:textColor="#5E5850"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
                 android:textSize="11.5sp"
                 android:maxLines="1"
                 android:ellipsize="end" />
@@ -179,7 +180,8 @@
                 android:paddingBottom="2dp"
                 android:paddingLeft="8dp"
                 android:text="♪ One Shot"
-                android:textColor="#5E5850"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
                 android:textSize="11.5sp"
                 android:maxLines="1"
                 android:ellipsize="end" />
@@ -214,7 +216,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="DEEP DIVE"
-                    android:textColor="#1C1A17"
+                    android:textColor="#FFFFFF"
                     android:textSize="13.5sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.06" />
@@ -283,7 +285,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="Ends at --:--"
-                    android:textColor="#756F67"
+                    android:textColor="#F0EDE8"
                     android:textSize="11.5sp"
                     android:maxLines="1"
                     android:ellipsize="end" />
@@ -334,7 +336,8 @@
                 android:paddingBottom="2dp"
                 android:paddingRight="8dp"
                 android:text="🔔 No reminders"
-                android:textColor="#5E5850"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
                 android:textSize="11.5sp"
                 android:maxLines="1"
                 android:ellipsize="end" />
@@ -353,7 +356,8 @@
                 android:paddingBottom="2dp"
                 android:paddingLeft="8dp"
                 android:text="♪ One Shot"
-                android:textColor="#5E5850"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
                 android:textSize="11.5sp"
                 android:maxLines="1"
                 android:ellipsize="end" />

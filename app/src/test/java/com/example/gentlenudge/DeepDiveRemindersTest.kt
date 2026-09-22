@@ -326,49 +326,5 @@ class DeepDiveRemindersTest {
         )
         org.junit.Assert.assertNull("Target end in the past must return null", endedResult)
     }
-
-    @Test
-    fun testDeepDivePositionPersistence_SaveAndRestore() {
-        DeepDiveManager.clearCustomPosition(context)
-        val defaultPos = DeepDiveManager.positionState.value
-        assertFalse("Initially should not have custom position", defaultPos.hasCustomPosition)
-        assertEquals(0f, defaultPos.xRatio, 0.001f)
-        assertEquals(0f, defaultPos.yRatio, 0.001f)
-
-        // Save position ratios (e.g. x=0.25, y=0.60)
-        DeepDiveManager.savePositionRatios(context, 0.25f, 0.60f)
-
-        val updatedPos = DeepDiveManager.positionState.value
-        assertTrue("Should have custom position after saving", updatedPos.hasCustomPosition)
-        assertEquals(0.25f, updatedPos.xRatio, 0.001f)
-        assertEquals(0.60f, updatedPos.yRatio, 0.001f)
-
-        // Simulate app restart / init
-        val fromPrefs = DeepDiveManager.getSavedPosition(context)
-        assertTrue("Saved position from preferences should be active", fromPrefs.hasCustomPosition)
-        assertEquals(0.25f, fromPrefs.xRatio, 0.001f)
-        assertEquals(0.60f, fromPrefs.yRatio, 0.001f)
-
-        // Reset to default
-        DeepDiveManager.clearCustomPosition(context)
-        val clearedPos = DeepDiveManager.positionState.value
-        assertFalse("Custom position should be cleared", clearedPos.hasCustomPosition)
-        assertEquals(0f, clearedPos.xRatio, 0.001f)
-        assertEquals(0f, clearedPos.yRatio, 0.001f)
-    }
-
-    @Test
-    fun testDeepDivePositionPersistence_ExtremeRatiosClampCorrectly() {
-        DeepDiveManager.clearCustomPosition(context)
-
-        // Save position with ratios that exceed 0f..1f
-        DeepDiveManager.savePositionRatios(context, -0.5f, 1.8f)
-        val clampedPos = DeepDiveManager.positionState.value
-        assertTrue("Custom position should be active", clampedPos.hasCustomPosition)
-        assertEquals(0f, clampedPos.xRatio, 0.001f)
-        assertEquals(1f, clampedPos.yRatio, 0.001f)
-
-        DeepDiveManager.clearCustomPosition(context)
-    }
 }
 

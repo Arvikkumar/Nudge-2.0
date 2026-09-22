@@ -37,9 +37,6 @@ object DeepDiveManager {
     private const val KEY_STYLE = "deep_dive_notification_style"
     private const val KEY_REMINDER_POINTS = "deep_dive_reminder_points"
     private const val KEY_CONFIGURED_REMINDERS = "deep_dive_configured_reminders"
-    private const val KEY_CUSTOM_POSITION_ACTIVE = "deep_dive_custom_position_active"
-    private const val KEY_POSITION_X_RATIO = "deep_dive_position_x_ratio"
-    private const val KEY_POSITION_Y_RATIO = "deep_dive_position_y_ratio"
     private const val DEFAULT_STYLE = "One Shot" // "One Shot" or "Full Ringtone"
 
     const val DEEP_DIVE_ALARM_REQUEST_CODE = 998877
@@ -74,17 +71,8 @@ object DeepDiveManager {
         val reminderPoints: List<ReminderPoint> = emptyList()
     )
 
-    data class DeepDivePosition(
-        val hasCustomPosition: Boolean = false,
-        val xRatio: Float = 0f,
-        val yRatio: Float = 0f
-    )
-
     private val _state = MutableStateFlow(DeepDiveState())
     val state: StateFlow<DeepDiveState> = _state.asStateFlow()
-
-    private val _positionState = MutableStateFlow(DeepDivePosition())
-    val positionState: StateFlow<DeepDivePosition> = _positionState.asStateFlow()
 
     private val _requestOpenConfig = MutableStateFlow(false)
     val requestOpenConfig: StateFlow<Boolean> = _requestOpenConfig.asStateFlow()
@@ -257,42 +245,6 @@ object DeepDiveManager {
                 reminderPoints = emptyList()
             )
         }
-
-        // Restore saved custom position if present
-        _positionState.value = getSavedPosition(context)
-    }
-
-    fun savePositionRatios(context: Context, xRatio: Float, yRatio: Float) {
-        val clampedX = xRatio.coerceIn(0f, 1f)
-        val clampedY = yRatio.coerceIn(0f, 1f)
-        getPrefs(context).edit()
-            .putBoolean(KEY_CUSTOM_POSITION_ACTIVE, true)
-            .putFloat(KEY_POSITION_X_RATIO, clampedX)
-            .putFloat(KEY_POSITION_Y_RATIO, clampedY)
-            .apply()
-        _positionState.value = DeepDivePosition(
-            hasCustomPosition = true,
-            xRatio = clampedX,
-            yRatio = clampedY
-        )
-    }
-
-    fun clearCustomPosition(context: Context) {
-        getPrefs(context).edit()
-            .remove(KEY_CUSTOM_POSITION_ACTIVE)
-            .remove(KEY_POSITION_X_RATIO)
-            .remove(KEY_POSITION_Y_RATIO)
-            .apply()
-        _positionState.value = DeepDivePosition()
-    }
-
-    fun getSavedPosition(context: Context): DeepDivePosition {
-        val prefs = getPrefs(context)
-        val hasCustom = prefs.getBoolean(KEY_CUSTOM_POSITION_ACTIVE, false)
-        if (!hasCustom) return DeepDivePosition()
-        val x = prefs.getFloat(KEY_POSITION_X_RATIO, 0f).coerceIn(0f, 1f)
-        val y = prefs.getFloat(KEY_POSITION_Y_RATIO, 0f).coerceIn(0f, 1f)
-        return DeepDivePosition(hasCustomPosition = true, xRatio = x, yRatio = y)
     }
 
     fun getSavedNotificationStyle(context: Context): String {

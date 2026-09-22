@@ -144,7 +144,7 @@ class NudgeViewModel(
                     ThemeMode.SYSTEM
                 }
             } else {
-                ThemeMode.SYSTEM
+                ThemeMode.LIGHT
             }
         }
     )

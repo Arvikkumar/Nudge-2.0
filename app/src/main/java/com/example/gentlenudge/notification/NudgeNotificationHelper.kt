@@ -21,11 +21,14 @@ import java.util.Calendar
 
 object NudgeNotificationHelper {
 
-    const val GENTLE_CHANNEL_ID = "gentle_nudge_channel"
+    const val OLD_GENTLE_CHANNEL_ID = "gentle_nudge_channel"
+    const val OLD_FULL_RINGTONE_CHANNEL_ID = "full_ringtone_nudge_channel"
+
+    const val GENTLE_CHANNEL_ID = "gentle_nudge_channel_v2"
     const val GENTLE_CHANNEL_NAME = "Nudges"
     const val GENTLE_CHANNEL_DESC = "Quiet, peaceful reminders for the things you want to remember"
 
-    const val FULL_RINGTONE_CHANNEL_ID = "full_ringtone_nudge_channel"
+    const val FULL_RINGTONE_CHANNEL_ID = "full_ringtone_nudge_channel_v2"
     const val FULL_RINGTONE_CHANNEL_NAME = "Full Ringtone Reminders"
     const val FULL_RINGTONE_CHANNEL_DESC = "Prominent alarm-style reminders with full ringtone"
 
@@ -59,7 +62,13 @@ object NudgeNotificationHelper {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-            // Gentle channel (subtle, standard notification)
+            // Gentle channel (subtle, standard notification with explicit notification sound)
+            val gentleSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val gentleAudioAttributes = AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .build()
+
             val gentleChannel = NotificationChannel(
                 GENTLE_CHANNEL_ID,
                 GENTLE_CHANNEL_NAME,
@@ -68,6 +77,7 @@ object NudgeNotificationHelper {
                 description = GENTLE_CHANNEL_DESC
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 200)
+                setSound(gentleSound, gentleAudioAttributes)
                 setShowBadge(true)
             }
             notificationManager.createNotificationChannel(gentleChannel)

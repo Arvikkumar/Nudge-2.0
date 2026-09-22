@@ -130,14 +130,7 @@ fun DeepDiveCard(
     state: DeepDiveManager.DeepDiveState,
     onStartSession: (endTimeMillis: Long, style: String) -> Unit,
     onEndSession: () -> Unit,
-    modifier: Modifier = Modifier,
-    isFloating: Boolean = false,
-    isMoveMode: Boolean = false,
-    onEnterMoveMode: () -> Unit = {},
-    onDoneMoveMode: () -> Unit = {},
-    onResetPosition: () -> Unit = {},
-    onDragDelta: (Offset) -> Unit = {},
-    onDragEnd: () -> Unit = {}
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var showConfigSheet by remember { mutableStateOf(false) }
@@ -182,107 +175,64 @@ fun DeepDiveCard(
     val haptic = LocalHapticFeedback.current
     val viewConfig = LocalViewConfiguration.current
 
-    val positionState by DeepDiveManager.positionState.collectAsStateWithLifecycle()
-    var isDragging by remember { mutableStateOf(false) }
-
-    val gestureModifier = Modifier.pointerInput(isMoveMode) {
+    val gestureModifier = Modifier.pointerInput(Unit) {
         val touchSlop = viewConfig.touchSlop
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false)
-            if (isMoveMode) {
-                // In Move Mode: drag begins as soon as finger moves past touchSlop
-                var prevPosition = down.position
-                var hasExceededSlop = false
+            val downPosition = down.position
+            var fingerReleasedBeforeTimeout = false
+            var movedBeyondSlop = false
+            var lastChange = down
+
+            try {
+                withTimeout(2000L) {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Main)
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        if (change == null || !change.pressed) {
+                            fingerReleasedBeforeTimeout = true
+                            if (change != null) lastChange = change
+                            break
+                        }
+                        lastChange = change
+                        val dist = (change.position - downPosition).getDistance()
+                        if (dist > touchSlop) {
+                            movedBeyondSlop = true
+                            break
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // ~2000ms continuous hold reached!
+            }
+
+            if (!fingerReleasedBeforeTimeout && !movedBeyondSlop) {
+                // 2-second continuous hold threshold satisfied -> trigger haptic & request Android widget pinning once!
+                lastChange.consume()
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                NudgeWidgetPinningHelper.requestPinDeepDiveWidget(context) { fallbackMsg ->
+                    Toast.makeText(context, fallbackMsg, Toast.LENGTH_SHORT).show()
+                }
+
+                // Consume remaining pointer events until release so release does NOT trigger tap
                 while (true) {
                     val event = awaitPointerEvent(PointerEventPass.Main)
                     val change = event.changes.firstOrNull { it.id == down.id }
                     if (change == null || !change.pressed) {
                         break
                     }
-                    val currentPos = change.position
-                    val dist = (currentPos - down.position).getDistance()
-                    if (!hasExceededSlop && dist > touchSlop) {
-                        hasExceededSlop = true
-                        isDragging = true
-                    }
-                    if (hasExceededSlop) {
-                        change.consume()
-                        val delta = currentPos - prevPosition
-                        onDragDelta(delta)
-                    }
-                    prevPosition = currentPos
+                    change.consume()
                 }
-                if (hasExceededSlop) {
-                    isDragging = false
-                    onDragEnd()
+            } else if (fingerReleasedBeforeTimeout && !movedBeyondSlop) {
+                // Normal tap released before 2 seconds!
+                if (isActuallyActive) {
+                    showActiveDetailSheet = true
+                } else {
+                    showConfigSheet = true
                 }
             } else {
-                // Normal Mode: Differentiate quick tap vs ~2000ms continuous hold vs list scroll
-                val downPosition = down.position
-                var fingerReleasedBeforeTimeout = false
-                var movedBeyondSlop = false
-                var lastChange = down
-
-                try {
-                    withTimeout(2000L) {
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Main)
-                            val change = event.changes.firstOrNull { it.id == down.id }
-                            if (change == null || !change.pressed) {
-                                fingerReleasedBeforeTimeout = true
-                                if (change != null) lastChange = change
-                                break
-                            }
-                            lastChange = change
-                            val dist = (change.position - downPosition).getDistance()
-                            if (dist > touchSlop) {
-                                movedBeyondSlop = true
-                                break
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    // ~2000ms continuous hold reached!
-                }
-
-                if (!fingerReleasedBeforeTimeout && !movedBeyondSlop) {
-                    // 2-second continuous hold threshold satisfied -> trigger haptic & enter Move Mode!
-                    lastChange.consume()
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onEnterMoveMode()
-
-                    // Continue tracking drag immediately if finger is still down!
-                    var prevPosition = lastChange.position
-                    var didDrag = false
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Main)
-                        val change = event.changes.firstOrNull { it.id == down.id }
-                        if (change == null || !change.pressed) {
-                            break
-                        }
-                        change.consume()
-                        val currentPos = change.position
-                        val delta = currentPos - prevPosition
-                        prevPosition = currentPos
-                        didDrag = true
-                        isDragging = true
-                        onDragDelta(delta)
-                    }
-                    if (didDrag) {
-                        isDragging = false
-                        onDragEnd()
-                    }
-                } else if (fingerReleasedBeforeTimeout && !movedBeyondSlop) {
-                    // Normal tap released before 2 seconds!
-                    if (isActuallyActive) {
-                        showActiveDetailSheet = true
-                    } else {
-                        showConfigSheet = true
-                    }
-                } else {
-                    // Moved beyond touch slop before 2s -> normal vertical scrolling in LazyColumn!
-                    // Events left unconsumed so parent scrolls freely.
-                }
+                // Moved beyond touch slop before 2s -> normal vertical scrolling in LazyColumn!
+                // Events left unconsumed so parent scrolls freely.
             }
         }
     }
@@ -290,25 +240,17 @@ fun DeepDiveCard(
     Card(
         modifier = modifier
             .testTag("deep_dive_card")
-            .graphicsLayer {
-                val targetScale = if (isMoveMode) 1.02f else 1f
-                this.scaleX = targetScale
-                this.scaleY = targetScale
-            }
             .clip(RoundedCornerShape(18.dp))
             .then(gestureModifier),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isMoveMode) {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-            } else if (isActuallyActive) {
+            containerColor = if (isActuallyActive) {
                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
             } else {
                 MaterialTheme.colorScheme.surface
             }
         ),
         border = when {
-            isMoveMode -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
             isActuallyActive -> BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
             else -> CardDefaults.outlinedCardBorder().copy(
                 brush = SolidColor(MaterialTheme.colorScheme.outline),
@@ -316,109 +258,10 @@ fun DeepDiveCard(
             )
         },
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isDragging) 8.dp else if (isMoveMode || isFloating) 4.dp else 0.dp
+            defaultElevation = 0.dp
         )
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            if (isMoveMode) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                        .padding(horizontal = 14.dp, vertical = 7.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        // Drag handle dots
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            repeat(3) {
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(3.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primary)
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .size(3.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primary)
-                                    )
-                                }
-                            }
-                        }
-
-                        Text(
-                            text = "Move Mode · Drag to reposition",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 11.5.sp
-                            ),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (positionState.hasCustomPosition || isFloating || isMoveMode) {
-                            Surface(
-                                onClick = onResetPosition,
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.testTag("deep_dive_move_mode_reset")
-                            ) {
-                                Text(
-                                    text = "Reset",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Medium,
-                                        fontSize = 11.sp
-                                    ),
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                )
-                            }
-                        }
-
-                        Surface(
-                            onClick = onDoneMoveMode,
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.testTag("deep_dive_move_mode_done")
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Check,
-                                    contentDescription = "Done",
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = "Done",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
             Box(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier

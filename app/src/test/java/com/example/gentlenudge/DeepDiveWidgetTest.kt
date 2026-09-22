@@ -129,4 +129,56 @@ class DeepDiveWidgetTest {
         provider.onReceive(context, Intent(Intent.ACTION_TIMEZONE_CHANGED))
         provider.onReceive(context, Intent(Intent.ACTION_DATE_CHANGED))
     }
+
+    @Test
+    fun testWidgetSizes_SimulationAndInflation() {
+        val inflater = LayoutInflater.from(context)
+
+        // 1. Current Large size (e.g. 260dp x 140dp)
+        val largeContainer = FrameLayout(context).apply {
+            layoutParams = FrameLayout.LayoutParams(700, 380)
+        }
+        val normalView = inflater.inflate(R.layout.widget_deep_dive, largeContainer, true)
+        assertNotNull(normalView.findViewById(R.id.widget_deep_dive_title))
+        assertNotNull(normalView.findViewById(R.id.widget_deep_dive_subtitle))
+        assertNotNull(normalView.findViewById(R.id.widget_btn_30min))
+        assertNotNull(normalView.findViewById(R.id.widget_btn_1hour))
+        assertNotNull(normalView.findViewById(R.id.widget_btn_quick_play))
+
+        // 2. Current Small / Compact size (e.g. 220dp x 90dp)
+        val smallContainer = FrameLayout(context).apply {
+            layoutParams = FrameLayout.LayoutParams(550, 240)
+        }
+        val shortView = inflater.inflate(R.layout.widget_deep_dive_short, smallContainer, true)
+        assertNotNull(shortView.findViewById(R.id.widget_deep_dive_title))
+        assertNotNull(shortView.findViewById(R.id.widget_btn_30min))
+        assertNotNull(shortView.findViewById(R.id.widget_btn_1hour))
+        assertNotNull(shortView.findViewById(R.id.widget_btn_quick_play))
+        assertNotNull(shortView.findViewById(R.id.widget_idle_reminders_text))
+        assertNotNull(shortView.findViewById(R.id.widget_idle_sound_text))
+
+        // 3. Short and Wide size (e.g. 360dp x 80dp)
+        val shortWideContainer = FrameLayout(context).apply {
+            layoutParams = FrameLayout.LayoutParams(900, 210)
+        }
+        val shortWideView = inflater.inflate(R.layout.widget_deep_dive_short, shortWideContainer, true)
+        assertNotNull(shortWideView)
+
+        // 4. Narrow and Tall / Intermediate size (e.g. 180dp x 120dp)
+        val narrowContainer = FrameLayout(context).apply {
+            layoutParams = FrameLayout.LayoutParams(450, 320)
+        }
+        val narrowView = inflater.inflate(R.layout.widget_deep_dive_short, narrowContainer, true)
+        assertNotNull(narrowView)
+
+        // 5. Active state in compact size
+        val activeShortContainer = FrameLayout(context).apply {
+            layoutParams = FrameLayout.LayoutParams(550, 240)
+        }
+        val activeShortView = inflater.inflate(R.layout.widget_deep_dive_short, activeShortContainer, true)
+        assertNotNull(activeShortView.findViewById(R.id.widget_active_chronometer))
+        assertNotNull(activeShortView.findViewById(R.id.widget_active_end_time))
+        assertNotNull(activeShortView.findViewById(R.id.widget_btn_stop))
+        assertNotNull(activeShortView.findViewById(R.id.widget_active_badge))
+    }
 }
