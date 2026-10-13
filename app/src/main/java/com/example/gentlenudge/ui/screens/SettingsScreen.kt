@@ -110,6 +110,7 @@ fun SettingsScreen(
     lastManualBackupTimestamp: Long = lastBackupTimestamp,
     lastAutoBackupTimestamp: Long = 0L,
     autoBackupFiles: List<com.example.gentlenudge.backup.NudgeBackupManager.AutoBackupFileInfo> = emptyList(),
+    onShareAutoBackupItem: (com.example.gentlenudge.backup.NudgeBackupManager.AutoBackupFileInfo) -> Unit = {},
     onShareAutoBackup: (java.io.File) -> Unit = {},
     autoBackupEnabled: Boolean = false,
     onToggleAutoBackup: () -> Unit = {},
@@ -117,6 +118,11 @@ fun SettingsScreen(
     autoBackupHour: Int = 23,
     autoBackupMinute: Int = 0,
     onSetAutoBackupSchedule: (dayOfWeek: Int, hour: Int, minute: Int) -> Unit = { _, _, _ -> },
+    autoBackupDestination: String = com.example.gentlenudge.backup.NudgeBackupScheduler.DESTINATION_INTERNAL,
+    autoBackupCustomTreeName: String? = null,
+    autoBackupLastFallbackStatus: String? = null,
+    onSelectAutoBackupDestination: (String) -> Unit = {},
+    onChooseCustomFolder: () -> Unit = {},
     onResetSampleData: () -> Unit = {},
     onShowToast: (String) -> Unit,
     isDark: Boolean = false,
@@ -126,6 +132,7 @@ fun SettingsScreen(
     val context = LocalContext.current
 
     var showAutoScheduleDialog by remember { mutableStateOf(false) }
+    var showDestinationDialog by remember { mutableStateOf(false) }
     var isAlertsExpanded by rememberSaveable { mutableStateOf(false) }
     var isBackupExpanded by rememberSaveable { mutableStateOf(false) }
     var isHistoryExpanded by rememberSaveable { mutableStateOf(false) }
@@ -296,6 +303,76 @@ fun SettingsScreen(
                             description = "Scheduled automatic local backup",
                             valueText = nextAutoBackupFormatted
                         )
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), thickness = 0.8.dp)
+
+                        val destinationLabel = when (autoBackupDestination) {
+                            com.example.gentlenudge.backup.NudgeBackupScheduler.DESTINATION_DOWNLOADS -> "Phone Downloads ⌵"
+                            com.example.gentlenudge.backup.NudgeBackupScheduler.DESTINATION_CUSTOM -> "Custom Folder ⌵"
+                            else -> "Inside Nudge ⌵"
+                        }
+                        val destinationDesc = when (autoBackupDestination) {
+                            com.example.gentlenudge.backup.NudgeBackupScheduler.DESTINATION_DOWNLOADS -> "Download/Nudge Backups (Visible in Files app)"
+                            com.example.gentlenudge.backup.NudgeBackupScheduler.DESTINATION_CUSTOM -> {
+                                if (!autoBackupCustomTreeName.isNullOrBlank()) "Folder: $autoBackupCustomTreeName"
+                                else "Select a custom destination folder"
+                            }
+                            else -> "Private app storage (Secure & on-device)"
+                        }
+
+                        SettingActionRow(
+                            icon = Icons.Outlined.FileDownload,
+                            title = "Backup destination",
+                            description = destinationDesc,
+                            actionText = destinationLabel,
+                            onClick = { showDestinationDialog = true }
+                        )
+
+                        if (autoBackupDestination == com.example.gentlenudge.backup.NudgeBackupScheduler.DESTINATION_CUSTOM) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                TextButton(
+                                    onClick = onChooseCustomFolder,
+                                    modifier = Modifier.height(34.dp)
+                                ) {
+                                    Icon(Icons.Outlined.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (autoBackupCustomTreeName.isNullOrBlank()) "Choose Folder" else "Change Folder",
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                            }
+                        }
+
+                        if (!autoBackupLastFallbackStatus.isNullOrBlank()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = autoBackupLastFallbackStatus,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                        }
                     }
 
                     if (autoBackupFiles.isNotEmpty()) {
@@ -315,8 +392,16 @@ fun SettingsScreen(
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(bottom = 6.dp)
                             )
+                            val retentionCaption = when (autoBackupDestination) {
+                                com.example.gentlenudge.backup.NudgeBackupScheduler.DESTINATION_DOWNLOADS ->
+                                    "Latest 3 backups retained in Download/Nudge Backups. Tap to share or save externally."
+                                com.example.gentlenudge.backup.NudgeBackupScheduler.DESTINATION_CUSTOM ->
+                                    "Latest 3 backups retained in your selected folder. Tap to share or save externally."
+                                else ->
+                                    "Latest 3 backups retained safely in internal storage. Tap to share or save externally."
+                            }
                             Text(
-                                text = "Latest 3 backups retained safely in internal storage. Tap to share or save externally.",
+                                text = retentionCaption,
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(bottom = 8.dp)
@@ -348,7 +433,13 @@ fun SettingsScreen(
                                         )
                                     }
                                     TextButton(
-                                        onClick = { onShareAutoBackup(backupItem.file) },
+                                        onClick = {
+                                            if (backupItem.contentUri != null || backupItem.file != null) {
+                                                onShareAutoBackupItem(backupItem)
+                                            } else if (backupItem.file != null) {
+                                                onShareAutoBackup(backupItem.file)
+                                            }
+                                        },
                                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                                         modifier = Modifier.height(36.dp)
                                     ) {
@@ -596,6 +687,110 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showAutoScheduleDialog = false }) {
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
+    }
+
+    // Dialog: Select Backup Destination
+    if (showDestinationDialog) {
+        val destinationOptions = listOf(
+            Triple(
+                com.example.gentlenudge.backup.NudgeBackupScheduler.DESTINATION_INTERNAL,
+                "Inside Nudge (Private App Storage)",
+                "Saved safely in private internal storage. Not accessible by external apps."
+            ),
+            Triple(
+                com.example.gentlenudge.backup.NudgeBackupScheduler.DESTINATION_DOWNLOADS,
+                "Phone Downloads (Shared Storage)",
+                "Saved in Download/Nudge Backups. Visible in Android's Files app, easily copied or moved."
+            ),
+            Triple(
+                com.example.gentlenudge.backup.NudgeBackupScheduler.DESTINATION_CUSTOM,
+                "Choose Another Folder",
+                "Pick any folder on your device or SD card. Access permissions persist across reboots."
+            )
+        )
+        var tempSelectedDest by remember { mutableStateOf(autoBackupDestination) }
+
+        AlertDialog(
+            onDismissRequest = { showDestinationDialog = false },
+            title = {
+                Text(
+                    text = "Backup Destination",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Choose where recurring automatic backups should be saved:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    destinationOptions.forEach { (destKey, destTitle, destSubtitle) ->
+                        val isSelected = tempSelectedDest == destKey
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                    else MaterialTheme.colorScheme.surface
+                                )
+                                .selectable(
+                                    selected = isSelected,
+                                    onClick = { tempSelectedDest = destKey },
+                                    role = Role.RadioButton
+                                )
+                                .padding(vertical = 8.dp, horizontal = 8.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = { tempSelectedDest = destKey },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = NudgeBlue,
+                                    unselectedColor = MaterialTheme.colorScheme.outline
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = destTitle,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = destSubtitle,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onSelectAutoBackupDestination(tempSelectedDest)
+                        showDestinationDialog = false
+                        if (tempSelectedDest == com.example.gentlenudge.backup.NudgeBackupScheduler.DESTINATION_CUSTOM && autoBackupCustomTreeName.isNullOrBlank()) {
+                            onChooseCustomFolder()
+                        }
+                    }
+                ) {
+                    Text("Confirm", color = NudgeBlue, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDestinationDialog = false }) {
                     Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }

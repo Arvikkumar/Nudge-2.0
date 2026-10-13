@@ -215,19 +215,47 @@ class NudgeNotificationReceiver : BroadcastReceiver() {
                     NudgeNotificationHelper.ACTION_SNOOZE_NUDGE -> {
                         val task = dao.getTaskById(taskId)
                         if (task != null) {
-                            val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
-                            val snoozedMillis = System.currentTimeMillis() + (30 * 60 * 1000L)
+                            val prefs = context.getSharedPreferences("gentle_nudge_prefs", Context.MODE_PRIVATE)
+                            val defaultSnooze = intent.getStringExtra(NudgeNotificationHelper.EXTRA_SNOOZE_DURATION)
+                                ?: prefs.getString("default_snooze", "30 minutes")
+                                ?: "30 minutes"
+                            val now = System.currentTimeMillis()
+                            val snoozedMillis = NudgeAlarmScheduler.calculateSnoozeMillis(defaultSnooze, now)
+
+                            val timeFormat = SimpleDateFormat("h:mm a", Locale.US)
                             val snoozedTime = timeFormat.format(Date(snoozedMillis))
+
+                            // Calculate date boundary relative to today
+                            val nowCal = Calendar.getInstance().apply { timeInMillis = now }
+                            val targetCal = Calendar.getInstance().apply { timeInMillis = snoozedMillis }
+                            val dateLabel = if (targetCal.get(Calendar.DAY_OF_YEAR) != nowCal.get(Calendar.DAY_OF_YEAR) ||
+                                targetCal.get(Calendar.YEAR) != nowCal.get(Calendar.YEAR)) {
+                                "Tomorrow"
+                            } else if (defaultSnooze.trim().equals("tonight", ignoreCase = true)) {
+                                "Tonight"
+                            } else {
+                                "Today"
+                            }
+
                             val updatedTask = task.copy(
                                 timeLabel = snoozedTime,
-                                dateLabel = "Today",
-                                section = "today",
+                                dateLabel = dateLabel,
+                                section = if (dateLabel == "Today" || dateLabel == "Tonight") "today" else "later",
                                 isDone = false,
                                 completedAt = null
                             )
                             dao.updateTask(updatedTask)
+
+                            // Unclaim any previous delivery for this new timestamp
+                            val newOccurrenceKey = NudgeAlarmScheduler.getTaskOccurrenceKey(updatedTask.id, snoozedMillis)
+                            NudgeAlarmScheduler.unclaimTaskReminderDelivery(context, newOccurrenceKey)
+
+                            // Schedule with exact absolute trigger timestamp
                             NudgeAlarmScheduler.saveScheduledTriggerMillis(context, updatedTask.id, snoozedMillis)
-                            NudgeAlarmScheduler.scheduleTask(context, updatedTask, forceRecalculate = true)
+                            NudgeAlarmScheduler.scheduleTask(context, updatedTask, forceRecalculate = false, explicitTriggerMillis = snoozedMillis)
+                            NudgeNotificationHelper.dismissNotification(context, taskId)
+                            Log.d("NudgeReceiver", "Snoozed task ${task.id} with duration '$defaultSnooze' until $snoozedMillis ($snoozedTime, $dateLabel)")
+                        } else {
                             NudgeNotificationHelper.dismissNotification(context, taskId)
                         }
                     }

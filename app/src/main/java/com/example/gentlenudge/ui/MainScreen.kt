@@ -167,6 +167,9 @@ fun MainScreen(
     val autoBackupDay by viewModel.autoBackupDay.collectAsStateWithLifecycle()
     val autoBackupHour by viewModel.autoBackupHour.collectAsStateWithLifecycle()
     val autoBackupMinute by viewModel.autoBackupMinute.collectAsStateWithLifecycle()
+    val autoBackupDestination by viewModel.autoBackupDestination.collectAsStateWithLifecycle()
+    val autoBackupCustomTreeName by viewModel.autoBackupCustomTreeName.collectAsStateWithLifecycle()
+    val autoBackupLastFallbackStatus by viewModel.autoBackupLastFallbackStatus.collectAsStateWithLifecycle()
 
     var activeView by remember { mutableStateOf(NudgeView.TODAY) }
     var showRecentlyDeleted by remember { mutableStateOf(false) }
@@ -345,6 +348,40 @@ fun MainScreen(
                     showRestoreDialog = true
                 }
             }
+        }
+    }
+
+    val chooseFolderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { treeUri ->
+        if (treeUri != null) {
+            try {
+                val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                context.contentResolver.takePersistableUriPermission(treeUri, takeFlags)
+            } catch (e: Exception) {
+                android.util.Log.w("MainScreen", "Could not take persistable permission: ${e.message}")
+            }
+            var folderName: String? = null
+            try {
+                val docUri = android.provider.DocumentsContract.buildDocumentUriUsingTree(
+                    treeUri,
+                    android.provider.DocumentsContract.getTreeDocumentId(treeUri)
+                )
+                context.contentResolver.query(
+                    docUri,
+                    arrayOf(android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+                    null,
+                    null,
+                    null
+                )?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val colIndex = cursor.getColumnIndex(android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                        if (colIndex >= 0) folderName = cursor.getString(colIndex)
+                    }
+                }
+            } catch (_: Exception) {}
+            val finalFolderName = folderName ?: treeUri.lastPathSegment?.substringAfterLast(':') ?: "Selected Folder"
+            viewModel.setAutoBackupCustomFolder(treeUri.toString(), finalFolderName)
         }
     }
 
@@ -581,6 +618,9 @@ fun MainScreen(
                                 lastManualBackupTimestamp = lastManualBackupTimestamp,
                                 lastAutoBackupTimestamp = lastAutoBackupTimestamp,
                                 autoBackupFiles = autoBackupFiles,
+                                onShareAutoBackupItem = { item ->
+                                    com.example.gentlenudge.backup.NudgeBackupManager.shareAutoBackupItem(context, item)
+                                },
                                 onShareAutoBackup = { file ->
                                     com.example.gentlenudge.backup.NudgeBackupManager.shareAutoBackupFile(context, file)
                                 },
@@ -591,6 +631,15 @@ fun MainScreen(
                                 autoBackupMinute = autoBackupMinute,
                                 onSetAutoBackupSchedule = { day, hour, minute ->
                                     viewModel.setAutoBackupSchedule(day, hour, minute)
+                                },
+                                autoBackupDestination = autoBackupDestination,
+                                autoBackupCustomTreeName = autoBackupCustomTreeName,
+                                autoBackupLastFallbackStatus = autoBackupLastFallbackStatus,
+                                onSelectAutoBackupDestination = { dest ->
+                                    viewModel.setAutoBackupDestination(dest)
+                                },
+                                onChooseCustomFolder = {
+                                    chooseFolderLauncher.launch(null)
                                 },
                                 onResetSampleData = { viewModel.resetSampleData() },
                                 onShowToast = { viewModel.showToast(it) },

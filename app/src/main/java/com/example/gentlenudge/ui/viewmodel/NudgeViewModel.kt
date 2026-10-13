@@ -28,6 +28,7 @@ import com.example.gentlenudge.export.TimeGoalsPdfOptions
 import com.example.gentlenudge.nlp.NudgeNlpParser
 import com.example.gentlenudge.nlp.ParsedNudge
 import com.example.gentlenudge.notification.NudgeAlarmScheduler
+import com.example.gentlenudge.notification.NudgeNotificationHelper
 import com.example.gentlenudge.ui.theme.ThemeMode
 import com.example.gentlenudge.notification.NudgeEventNotificationScheduler
 import com.example.gentlenudge.ui.components.TaskOccurrenceResolver
@@ -208,6 +209,27 @@ class NudgeViewModel(
         prefs.getInt(NudgeBackupScheduler.KEY_AUTO_BACKUP_MINUTE, 0)
     )
     val autoBackupMinute: StateFlow<Int> = _autoBackupMinute.asStateFlow()
+
+    private val _autoBackupDestination = MutableStateFlow(
+        prefs.getString(NudgeBackupScheduler.KEY_AUTO_BACKUP_DESTINATION, NudgeBackupScheduler.DESTINATION_INTERNAL)
+            ?: NudgeBackupScheduler.DESTINATION_INTERNAL
+    )
+    val autoBackupDestination: StateFlow<String> = _autoBackupDestination.asStateFlow()
+
+    private val _autoBackupCustomTreeUri = MutableStateFlow(
+        prefs.getString(NudgeBackupScheduler.KEY_AUTO_BACKUP_CUSTOM_TREE_URI, null)
+    )
+    val autoBackupCustomTreeUri: StateFlow<String?> = _autoBackupCustomTreeUri.asStateFlow()
+
+    private val _autoBackupCustomTreeName = MutableStateFlow(
+        prefs.getString(NudgeBackupScheduler.KEY_AUTO_BACKUP_CUSTOM_TREE_NAME, null)
+    )
+    val autoBackupCustomTreeName: StateFlow<String?> = _autoBackupCustomTreeName.asStateFlow()
+
+    private val _autoBackupLastFallbackStatus = MutableStateFlow(
+        prefs.getString(NudgeBackupScheduler.KEY_AUTO_BACKUP_LAST_FALLBACK_STATUS, null)
+    )
+    val autoBackupLastFallbackStatus: StateFlow<String?> = _autoBackupLastFallbackStatus.asStateFlow()
 
     // Editing state
     private val _taskToEdit = MutableStateFlow<NudgeTask?>(null)
@@ -720,7 +742,10 @@ class NudgeViewModel(
 
     fun snoozeTask(task: NudgeTask, snoozeLabel: String) {
         viewModelScope.launch {
-            val (newTimeLabel, newDateLabel) = calculateSnoozeLabels(snoozeLabel)
+            val now = System.currentTimeMillis()
+            val targetMillis = NudgeAlarmScheduler.calculateSnoozeMillis(snoozeLabel, now)
+            val (newTimeLabel, newDateLabel) = calculateSnoozeLabels(snoozeLabel, now, targetMillis)
+
             val updated = task.copy(
                 timeLabel = newTimeLabel,
                 dateLabel = newDateLabel,
@@ -729,36 +754,35 @@ class NudgeViewModel(
                 completedAt = null
             )
             repository.update(updated)
+
             if (_notificationsEnabled.value) {
-                NudgeAlarmScheduler.scheduleTask(getApplication(), updated, forceRecalculate = true)
+                val newOccurrenceKey = NudgeAlarmScheduler.getTaskOccurrenceKey(updated.id, targetMillis)
+                NudgeAlarmScheduler.unclaimTaskReminderDelivery(getApplication(), newOccurrenceKey)
+                NudgeAlarmScheduler.saveScheduledTriggerMillis(getApplication(), updated.id, targetMillis)
+                NudgeAlarmScheduler.scheduleTask(getApplication(), updated, forceRecalculate = false, explicitTriggerMillis = targetMillis)
             }
+            NudgeNotificationHelper.dismissNotification(getApplication(), task.id)
             showToast("Okay. I’ll nudge you ${snoozeLabel.lowercase()}.")
         }
     }
 
-    private fun calculateSnoozeLabels(snoozeOption: String): Pair<String, String> {
-        val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
-        val now = System.currentTimeMillis()
-        return when (snoozeOption.lowercase().trim()) {
-            "15m", "15 minutes" -> {
-                Pair(timeFormat.format(Date(now + 15 * 60 * 1000L)), "Today")
-            }
-            "30m", "30 minutes" -> {
-                Pair(timeFormat.format(Date(now + 30 * 60 * 1000L)), "Today")
-            }
-            "1h", "1 hour" -> {
-                Pair(timeFormat.format(Date(now + 60 * 60 * 1000L)), "Today")
-            }
-            "tonight" -> {
-                Pair("8:00 PM", "Tonight")
-            }
-            "tomorrow" -> {
-                Pair("9:00 AM", "Tomorrow")
-            }
-            else -> {
-                Pair(timeFormat.format(Date(now + 30 * 60 * 1000L)), "Today")
-            }
+    fun calculateSnoozeLabels(
+        snoozeOption: String,
+        now: Long = System.currentTimeMillis(),
+        targetMillis: Long = NudgeAlarmScheduler.calculateSnoozeMillis(snoozeOption, now)
+    ): Pair<String, String> {
+        val timeFormat = SimpleDateFormat("h:mm a", Locale.US)
+        val nowCal = Calendar.getInstance().apply { timeInMillis = now }
+        val targetCal = Calendar.getInstance().apply { timeInMillis = targetMillis }
+        val dateLabel = if (targetCal.get(Calendar.DAY_OF_YEAR) != nowCal.get(Calendar.DAY_OF_YEAR) ||
+            targetCal.get(Calendar.YEAR) != nowCal.get(Calendar.YEAR)) {
+            "Tomorrow"
+        } else if (snoozeOption.trim().equals("tonight", ignoreCase = true)) {
+            "Tonight"
+        } else {
+            "Today"
         }
+        return Pair(timeFormat.format(Date(targetMillis)), dateLabel)
     }
 
     fun deleteTask(task: NudgeTask) {
@@ -1004,6 +1028,33 @@ class NudgeViewModel(
         NudgeBackupScheduler.scheduleAutoBackup(getApplication())
         val nextFormatted = NudgeBackupScheduler.formatNextAutoBackup(dayOfWeek, hour, minute)
         showToast("Schedule updated. Next backup: $nextFormatted")
+    }
+
+    fun setAutoBackupDestination(destination: String) {
+        _autoBackupDestination.value = destination
+        prefs.edit().putString(NudgeBackupScheduler.KEY_AUTO_BACKUP_DESTINATION, destination).apply()
+        loadAutoBackupFiles()
+        val label = when (destination) {
+            NudgeBackupScheduler.DESTINATION_DOWNLOADS -> "Phone Downloads (Download/Nudge Backups)"
+            NudgeBackupScheduler.DESTINATION_CUSTOM -> "Custom Folder"
+            else -> "Inside Nudge (Private App Storage)"
+        }
+        showToast("Backup destination set to $label.")
+    }
+
+    fun setAutoBackupCustomFolder(treeUriStr: String, folderName: String) {
+        _autoBackupCustomTreeUri.value = treeUriStr
+        _autoBackupCustomTreeName.value = folderName
+        _autoBackupDestination.value = NudgeBackupScheduler.DESTINATION_CUSTOM
+        prefs.edit()
+            .putString(NudgeBackupScheduler.KEY_AUTO_BACKUP_DESTINATION, NudgeBackupScheduler.DESTINATION_CUSTOM)
+            .putString(NudgeBackupScheduler.KEY_AUTO_BACKUP_CUSTOM_TREE_URI, treeUriStr)
+            .putString(NudgeBackupScheduler.KEY_AUTO_BACKUP_CUSTOM_TREE_NAME, folderName)
+            .remove(NudgeBackupScheduler.KEY_AUTO_BACKUP_LAST_FALLBACK_STATUS)
+            .apply()
+        _autoBackupLastFallbackStatus.value = null
+        loadAutoBackupFiles()
+        showToast("Custom backup folder set: $folderName")
     }
 
     fun refreshLastBackupTimestamp() {

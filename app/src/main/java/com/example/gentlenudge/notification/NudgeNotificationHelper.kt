@@ -44,6 +44,7 @@ object NudgeNotificationHelper {
     const val EXTRA_TASK_IS_REPEATING = "extra_task_is_repeating"
     const val EXTRA_TASK_OCCURRENCE_DATE = "extra_task_occurrence_date"
     const val EXTRA_TASK_OCCURRENCE_TIME = "extra_task_occurrence_time"
+    const val EXTRA_SNOOZE_DURATION = "extra_snooze_duration"
 
     const val EXTRA_EVENT_ID = "extra_event_id"
     const val EXTRA_EVENT_NAME = "extra_event_name"
@@ -232,10 +233,13 @@ object NudgeNotificationHelper {
         )
 
         // Action: Snooze
+        val prefs = context.getSharedPreferences("gentle_nudge_prefs", Context.MODE_PRIVATE)
+        val defaultSnooze = prefs.getString("default_snooze", "30 minutes") ?: "30 minutes"
         val snoozeIntent = Intent(context, NudgeNotificationReceiver::class.java).apply {
             action = ACTION_SNOOZE_NUDGE
             putExtra(EXTRA_TASK_ID, task.id)
             putExtra(EXTRA_TASK_TITLE, task.title)
+            putExtra(EXTRA_SNOOZE_DURATION, defaultSnooze)
         }
         val snoozePendingIntent = PendingIntent.getBroadcast(
             context,

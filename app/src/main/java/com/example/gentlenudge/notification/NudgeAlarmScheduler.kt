@@ -165,7 +165,12 @@ object NudgeAlarmScheduler {
         return baseTrigger
     }
 
-    fun scheduleTask(context: Context, task: NudgeTask, forceRecalculate: Boolean = false) {
+    fun scheduleTask(
+        context: Context,
+        task: NudgeTask,
+        forceRecalculate: Boolean = false,
+        explicitTriggerMillis: Long? = null
+    ) {
         if (task.isDone || task.isDeleted) return
 
         val now = System.currentTimeMillis()
@@ -173,7 +178,11 @@ object NudgeAlarmScheduler {
 
         val finalTriggerMillis: Long
 
-        if (isRepeating) {
+        if (explicitTriggerMillis != null && explicitTriggerMillis > now) {
+            saveScheduledTriggerMillis(context, task.id, explicitTriggerMillis)
+            unclaimTaskReminderDelivery(context, getTaskOccurrenceKey(task.id, explicitTriggerMillis))
+            finalTriggerMillis = explicitTriggerMillis
+        } else if (isRepeating) {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val saved = prefs.getLong("task_scheduled_trigger_${task.id}", -1L)
 
@@ -550,26 +559,39 @@ object NudgeAlarmScheduler {
         return null
     }
 
-    fun calculateSnoozeMillis(snoozeDuration: String): Long {
-        val now = System.currentTimeMillis()
-        return when (snoozeDuration.lowercase().trim()) {
-            "15 minutes" -> now + (15 * 60 * 1000L)
-            "30 minutes" -> now + (30 * 60 * 1000L)
-            "1 hour" -> now + (60 * 60 * 1000L)
-            "tonight" -> {
+    fun calculateSnoozeMillis(snoozeDuration: String, now: Long = System.currentTimeMillis()): Long {
+        val clean = snoozeDuration.lowercase().trim()
+        return when {
+            clean == "15m" || clean == "15 min" || clean == "15 mins" || clean == "15 minutes" ||
+                    clean == "in 15m" || clean == "in 15 min" || clean == "in 15 mins" || clean == "in 15 minutes" -> {
+                now + (15 * 60 * 1000L)
+            }
+            clean == "30m" || clean == "30 min" || clean == "30 mins" || clean == "30 minutes" ||
+                    clean == "in 30m" || clean == "in 30 min" || clean == "in 30 mins" || clean == "in 30 minutes" -> {
+                now + (30 * 60 * 1000L)
+            }
+            clean == "1h" || clean == "1 hr" || clean == "1 hour" || clean == "in 1h" || clean == "in 1 hr" ||
+                    clean == "in 1 hour" || clean == "60m" || clean == "60 min" || clean == "60 mins" || clean == "60 minutes" -> {
+                now + (60 * 60 * 1000L)
+            }
+            clean == "tonight" -> {
                 val cal = Calendar.getInstance().apply {
+                    timeInMillis = now
                     set(Calendar.HOUR_OF_DAY, 20)
                     set(Calendar.MINUTE, 0)
                     set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
                 }
                 if (cal.timeInMillis <= now) now + (60 * 60 * 1000L) else cal.timeInMillis
             }
-            "tomorrow" -> {
+            clean == "tomorrow" -> {
                 val cal = Calendar.getInstance().apply {
+                    timeInMillis = now
                     add(Calendar.DAY_OF_YEAR, 1)
                     set(Calendar.HOUR_OF_DAY, 9)
                     set(Calendar.MINUTE, 0)
                     set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
                 }
                 cal.timeInMillis
             }

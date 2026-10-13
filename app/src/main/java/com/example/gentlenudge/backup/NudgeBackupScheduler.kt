@@ -32,6 +32,15 @@ object NudgeBackupScheduler {
     const val KEY_AUTO_BACKUP_HOUR = "auto_backup_hour"
     const val KEY_AUTO_BACKUP_MINUTE = "auto_backup_minute"
 
+    const val KEY_AUTO_BACKUP_DESTINATION = "auto_backup_destination"
+    const val KEY_AUTO_BACKUP_CUSTOM_TREE_URI = "auto_backup_custom_tree_uri"
+    const val KEY_AUTO_BACKUP_CUSTOM_TREE_NAME = "auto_backup_custom_tree_name"
+    const val KEY_AUTO_BACKUP_LAST_FALLBACK_STATUS = "auto_backup_last_fallback_status"
+
+    const val DESTINATION_INTERNAL = "internal"
+    const val DESTINATION_DOWNLOADS = "downloads"
+    const val DESTINATION_CUSTOM = "custom"
+
     const val ACTION_TRIGGER_AUTO_BACKUP = "com.example.gentlenudge.ACTION_TRIGGER_AUTO_BACKUP"
 
     private const val REQUEST_CODE_AUTO_BACKUP = 8001

@@ -811,6 +811,104 @@ class NudgeAlarmDeliveryTest {
     }
 
     @Test
+    fun test9b_SnoozeHonors15MinuteDefaultSnoozeSetting() {
+        runBlocking {
+            val app = ApplicationProvider.getApplicationContext<com.example.gentlenudge.GentleNudgeApp>()
+            val dao = app.database.nudgeTaskDao()
+            val prefs = context.getSharedPreferences("gentle_nudge_prefs", Context.MODE_PRIVATE)
+            prefs.edit().putString("default_snooze", "15 minutes").commit()
+
+            val task = NudgeTask(
+                id = 519L,
+                title = "Test 9b Snooze 15m",
+                dateLabel = "Today",
+                timeLabel = "8:00 AM",
+                repeat = "Does not repeat",
+                isDone = false,
+                createdAt = System.currentTimeMillis() - 3600000L
+            )
+            dao.insertTask(task)
+
+            val beforeSnooze = System.currentTimeMillis()
+            val receiver = NudgeNotificationReceiver()
+            val snoozeIntent = Intent(context, NudgeNotificationReceiver::class.java).apply {
+                action = NudgeNotificationHelper.ACTION_SNOOZE_NUDGE
+                putExtra(NudgeNotificationHelper.EXTRA_TASK_ID, task.id)
+                putExtra(NudgeNotificationHelper.EXTRA_SNOOZE_DURATION, "15 minutes")
+            }
+            receiver.onReceive(context, snoozeIntent)
+            kotlinx.coroutines.delay(300)
+
+            val snoozedAlarm = shadowAlarmManager.scheduledAlarms.find {
+                val op = it.operation
+                val shadowOp = Shadows.shadowOf(op)
+                shadowOp.savedIntent.getLongExtra(NudgeNotificationHelper.EXTRA_TASK_ID, -1L) == task.id
+            }
+            assertNotNull("Alarm must be scheduled for 15-minute snooze", snoozedAlarm)
+            val delayMs = snoozedAlarm!!.triggerAtTime - beforeSnooze
+            assertTrue("Snoozed alarm delay should be ~15 minutes (was ${delayMs}ms)", delayMs in 890000..915000)
+
+            dao.deleteTaskById(task.id)
+            prefs.edit().remove("default_snooze").commit()
+        }
+    }
+
+    @Test
+    fun test9c_SnoozeHonors1HourDefaultSnoozeSetting() {
+        runBlocking {
+            val app = ApplicationProvider.getApplicationContext<com.example.gentlenudge.GentleNudgeApp>()
+            val dao = app.database.nudgeTaskDao()
+            val prefs = context.getSharedPreferences("gentle_nudge_prefs", Context.MODE_PRIVATE)
+            prefs.edit().putString("default_snooze", "1 hour").commit()
+
+            val task = NudgeTask(
+                id = 520L,
+                title = "Test 9c Snooze 1h",
+                dateLabel = "Today",
+                timeLabel = "9:00 AM",
+                repeat = "Does not repeat",
+                isDone = false,
+                createdAt = System.currentTimeMillis() - 3600000L
+            )
+            dao.insertTask(task)
+
+            val beforeSnooze = System.currentTimeMillis()
+            val receiver = NudgeNotificationReceiver()
+            val snoozeIntent = Intent(context, NudgeNotificationReceiver::class.java).apply {
+                action = NudgeNotificationHelper.ACTION_SNOOZE_NUDGE
+                putExtra(NudgeNotificationHelper.EXTRA_TASK_ID, task.id)
+            }
+            receiver.onReceive(context, snoozeIntent)
+            kotlinx.coroutines.delay(300)
+
+            val snoozedAlarm = shadowAlarmManager.scheduledAlarms.find {
+                val op = it.operation
+                val shadowOp = Shadows.shadowOf(op)
+                shadowOp.savedIntent.getLongExtra(NudgeNotificationHelper.EXTRA_TASK_ID, -1L) == task.id
+            }
+            assertNotNull("Alarm must be scheduled for 1-hour snooze", snoozedAlarm)
+            val delayMs = snoozedAlarm!!.triggerAtTime - beforeSnooze
+            assertTrue("Snoozed alarm delay should be ~1 hour (was ${delayMs}ms)", delayMs in 3590000..3615000)
+
+            dao.deleteTaskById(task.id)
+            prefs.edit().remove("default_snooze").commit()
+        }
+    }
+
+    @Test
+    fun test9d_InAppSnoozeLabelsPreserveExactTargetMillis() {
+        val now = 1700000000000L
+        val t15 = NudgeAlarmScheduler.calculateSnoozeMillis("in 15 minutes", now)
+        assertEquals(now + 15 * 60 * 1000L, t15)
+
+        val t30 = NudgeAlarmScheduler.calculateSnoozeMillis("in 30 minutes", now)
+        assertEquals(now + 30 * 60 * 1000L, t30)
+
+        val t1h = NudgeAlarmScheduler.calculateSnoozeMillis("in 1 hour", now)
+        assertEquals(now + 60 * 60 * 1000L, t1h)
+    }
+
+    @Test
     fun test10_EditingTitleAfterMidnightDoesNotShiftIntendedOccurrence() = runBlocking {
         val app = ApplicationProvider.getApplicationContext<com.example.gentlenudge.GentleNudgeApp>()
         val dao = app.database.nudgeTaskDao()

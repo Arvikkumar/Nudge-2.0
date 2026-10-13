@@ -516,4 +516,47 @@ class NudgeBackupManagerTest {
         assertTrue("Previous weekly scheduled time must be <= now", prevWeekly <= now)
         assertTrue("Previous weekly scheduled time must be within last 7 days", (now - prevWeekly) <= (7L * 24L * 3600000L + 60000L))
     }
+
+    @Test
+    fun testAutoBackupToggle_whenDisabled_doesNotScheduleAlarm() {
+        testPrefs.edit().putBoolean(NudgeBackupScheduler.KEY_AUTO_BACKUP_ENABLED, false).apply()
+        // Should execute cleanly without error and cancel alarm
+        NudgeBackupScheduler.scheduleAutoBackup(context)
+        assertFalse(testPrefs.getBoolean(NudgeBackupScheduler.KEY_AUTO_BACKUP_ENABLED, true))
+    }
+
+    @Test
+    fun testAutoBackupDestination_fallbackToInternal_whenCustomTreeMissing() = runBlocking {
+        // Set destination to custom without specifying URI
+        testPrefs.edit()
+            .putBoolean(NudgeBackupScheduler.KEY_AUTO_BACKUP_ENABLED, true)
+            .putString(NudgeBackupScheduler.KEY_AUTO_BACKUP_DESTINATION, NudgeBackupScheduler.DESTINATION_CUSTOM)
+            .remove(NudgeBackupScheduler.KEY_AUTO_BACKUP_CUSTOM_TREE_URI)
+            .apply()
+
+        val result = NudgeBackupManager.performAutomaticBackup(context, testDatabase, testPrefs)
+        assertTrue(result.isSuccess)
+        val file = result.getOrNull()
+        assertNotNull(file)
+        assertTrue(file!!.exists())
+
+        // Check fallback status recorded
+        val fallbackStatus = testPrefs.getString(NudgeBackupScheduler.KEY_AUTO_BACKUP_LAST_FALLBACK_STATUS, null)
+        assertNotNull("Fallback status should be recorded when custom folder is missing", fallbackStatus)
+        assertTrue(fallbackStatus!!.contains("Saved internally"))
+    }
+
+    @Test
+    fun testAutoBackupDestination_insideNudge_clearsFallbackStatus() = runBlocking {
+        testPrefs.edit()
+            .putBoolean(NudgeBackupScheduler.KEY_AUTO_BACKUP_ENABLED, true)
+            .putString(NudgeBackupScheduler.KEY_AUTO_BACKUP_DESTINATION, NudgeBackupScheduler.DESTINATION_INTERNAL)
+            .putString(NudgeBackupScheduler.KEY_AUTO_BACKUP_LAST_FALLBACK_STATUS, "Previous error")
+            .apply()
+
+        val result = NudgeBackupManager.performAutomaticBackup(context, testDatabase, testPrefs)
+        assertTrue(result.isSuccess)
+        val fallbackStatus = testPrefs.getString(NudgeBackupScheduler.KEY_AUTO_BACKUP_LAST_FALLBACK_STATUS, null)
+        assertTrue(fallbackStatus == null)
+    }
 }

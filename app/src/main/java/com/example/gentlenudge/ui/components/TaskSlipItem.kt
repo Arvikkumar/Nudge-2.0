@@ -406,6 +406,16 @@ fun TaskSlipItem(
                                 }
                             )
                             DropdownMenuItem(
+                                text = { Text("In 1 hour", style = MaterialTheme.typography.bodyMedium) },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    onSnooze("in 1 hour")
+                                }
+                            )
+                            DropdownMenuItem(
                                 text = { Text("Tonight", style = MaterialTheme.typography.bodyMedium) },
                                 leadingIcon = {
                                     Icon(Icons.Outlined.NightsStay, contentDescription = null, modifier = Modifier.size(18.dp))

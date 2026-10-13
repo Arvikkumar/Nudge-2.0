@@ -16,6 +16,12 @@ import com.example.gentlenudge.data.model.TimeGoalRecord
 import org.json.JSONArray
 import org.json.JSONObject
 import com.example.gentlenudge.notification.NudgeEventNotificationScheduler
+import android.content.ContentUris
+import android.content.ContentValues
+import android.os.Build
+import android.os.Environment
+import android.provider.DocumentsContract
+import android.provider.MediaStore
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -343,11 +349,13 @@ object NudgeBackupManager {
     // ==========================================
 
     data class AutoBackupFileInfo(
-        val file: File,
+        val file: File? = null,
+        val contentUri: Uri? = null,
         val name: String,
         val formattedDate: String,
         val sizeBytes: Long,
-        val formattedSize: String
+        val formattedSize: String,
+        val destinationType: String = NudgeBackupScheduler.DESTINATION_INTERNAL // internal, downloads, custom
     )
 
     fun getAutoBackupsDirectory(context: Context): File {
@@ -365,34 +373,171 @@ object NudgeBackupManager {
         }?.sortedByDescending { it.lastModified() } ?: emptyList()
     }
 
-    fun getAutoBackupFilesInfo(context: Context): List<AutoBackupFileInfo> {
-        val files = getAutoBackupFiles(context)
+    fun getMediaStoreBackupFilesInfo(context: Context): List<AutoBackupFileInfo> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return emptyList()
+        }
+        val items = mutableListOf<AutoBackupFileInfo>()
         val sdf = SimpleDateFormat("MMM d, yyyy • h:mm a", Locale.getDefault())
-        return files.map { file ->
+        val projection = arrayOf(
+            MediaStore.Downloads._ID,
+            MediaStore.Downloads.DISPLAY_NAME,
+            MediaStore.Downloads.SIZE,
+            MediaStore.Downloads.DATE_MODIFIED
+        )
+        val selection = "${MediaStore.Downloads.DISPLAY_NAME} LIKE ? AND ${MediaStore.Downloads.RELATIVE_PATH} LIKE ?"
+        val selectionArgs = arrayOf("Nudge_Backup_%.nudgebackup", "%Download/Nudge Backups%")
+        val sortOrder = "${MediaStore.Downloads.DATE_MODIFIED} DESC"
+
+        try {
+            context.contentResolver.query(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                selectionArgs,
+                sortOrder
+            )?.use { cursor ->
+                val idCol = cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID)
+                val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DISPLAY_NAME)
+                val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Downloads.SIZE)
+                val dateCol = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DATE_MODIFIED)
+
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idCol)
+                    val name = cursor.getString(nameCol) ?: continue
+                    val size = cursor.getLong(sizeCol)
+                    val dateSec = cursor.getLong(dateCol)
+                    val contentUri = ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, id)
+
+                    val dateStr = sdf.format(Date(if (dateSec > 0) dateSec * 1000L else System.currentTimeMillis()))
+                    val sizeKb = (size + 1023) / 1024
+                    val sizeStr = if (sizeKb >= 1024) String.format(Locale.US, "%.1f MB", sizeKb / 1024.0) else "$sizeKb KB"
+
+                    items.add(
+                        AutoBackupFileInfo(
+                            file = null,
+                            contentUri = contentUri,
+                            name = name,
+                            formattedDate = dateStr,
+                            sizeBytes = size,
+                            formattedSize = sizeStr,
+                            destinationType = NudgeBackupScheduler.DESTINATION_DOWNLOADS
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("NudgeBackupManager", "Error querying MediaStore downloads: ${e.message}", e)
+        }
+        return items
+    }
+
+    fun getCustomTreeBackupFilesInfo(context: Context, treeUriStr: String?): List<AutoBackupFileInfo> {
+        if (treeUriStr.isNullOrBlank()) return emptyList()
+        val treeUri = try { Uri.parse(treeUriStr) } catch (_: Exception) { return emptyList() }
+        val items = mutableListOf<AutoBackupFileInfo>()
+        val sdf = SimpleDateFormat("MMM d, yyyy • h:mm a", Locale.getDefault())
+
+        try {
+            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
+                treeUri,
+                DocumentsContract.getTreeDocumentId(treeUri)
+            )
+            val projection = arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                DocumentsContract.Document.COLUMN_SIZE,
+                DocumentsContract.Document.COLUMN_LAST_MODIFIED
+            )
+
+            context.contentResolver.query(childrenUri, projection, null, null, "${DocumentsContract.Document.COLUMN_LAST_MODIFIED} DESC")?.use { cursor ->
+                val idCol = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+                val nameCol = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                val sizeCol = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)
+                val dateCol = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+
+                while (cursor.moveToNext()) {
+                    val name = if (nameCol >= 0) cursor.getString(nameCol) else null
+                    if (name != null && name.startsWith("Nudge_Backup_") && name.endsWith(".nudgebackup")) {
+                        val docId = if (idCol >= 0) cursor.getString(idCol) else continue
+                        val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                        val size = if (sizeCol >= 0) cursor.getLong(sizeCol) else 0L
+                        val dateMs = if (dateCol >= 0) cursor.getLong(dateCol) else System.currentTimeMillis()
+
+                        val dateStr = sdf.format(Date(if (dateMs > 0) dateMs else System.currentTimeMillis()))
+                        val sizeKb = (size + 1023) / 1024
+                        val sizeStr = if (sizeKb >= 1024) String.format(Locale.US, "%.1f MB", sizeKb / 1024.0) else "$sizeKb KB"
+
+                        items.add(
+                            AutoBackupFileInfo(
+                                file = null,
+                                contentUri = docUri,
+                                name = name,
+                                formattedDate = dateStr,
+                                sizeBytes = size,
+                                formattedSize = sizeStr,
+                                destinationType = NudgeBackupScheduler.DESTINATION_CUSTOM
+                            )
+                        )
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("NudgeBackupManager", "Error querying custom tree backups: ${e.message}", e)
+        }
+        return items
+    }
+
+    fun getAutoBackupFilesInfo(context: Context): List<AutoBackupFileInfo> {
+        val prefs = NudgeBackupScheduler.getPrefs(context)
+        val activeDest = prefs.getString(NudgeBackupScheduler.KEY_AUTO_BACKUP_DESTINATION, NudgeBackupScheduler.DESTINATION_INTERNAL)
+            ?: NudgeBackupScheduler.DESTINATION_INTERNAL
+        val customTreeUri = prefs.getString(NudgeBackupScheduler.KEY_AUTO_BACKUP_CUSTOM_TREE_URI, null)
+
+        val internalFiles = getAutoBackupFiles(context)
+        val sdf = SimpleDateFormat("MMM d, yyyy • h:mm a", Locale.getDefault())
+        val internalInfos = internalFiles.map { file ->
             val dateStr = sdf.format(Date(file.lastModified()))
             val sizeKb = (file.length() + 1023) / 1024
             val sizeStr = if (sizeKb >= 1024) String.format(Locale.US, "%.1f MB", sizeKb / 1024.0) else "$sizeKb KB"
             AutoBackupFileInfo(
                 file = file,
+                contentUri = null,
                 name = file.name,
                 formattedDate = dateStr,
                 sizeBytes = file.length(),
-                formattedSize = sizeStr
+                formattedSize = sizeStr,
+                destinationType = NudgeBackupScheduler.DESTINATION_INTERNAL
             )
         }
+
+        val destinationInfos = when (activeDest) {
+            NudgeBackupScheduler.DESTINATION_DOWNLOADS -> getMediaStoreBackupFilesInfo(context)
+            NudgeBackupScheduler.DESTINATION_CUSTOM -> getCustomTreeBackupFilesInfo(context, customTreeUri)
+            else -> emptyList()
+        }
+
+        // Return current destination items + legacy/internal backups (without duplicates)
+        val combined = (destinationInfos + internalInfos).distinctBy { it.name }
+        return combined.take(6) // show active plus legacy
     }
 
-    fun shareAutoBackupFile(context: Context, file: File) {
+    fun shareAutoBackupItem(context: Context, item: AutoBackupFileInfo) {
         try {
-            val uri = FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file
-            )
+            val shareUri: Uri = item.contentUri ?: if (item.file != null) {
+                FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    item.file
+                )
+            } else {
+                return
+            }
+
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "application/octet-stream"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, "Nudge Backup - ${file.name}")
+                putExtra(Intent.EXTRA_STREAM, shareUri)
+                putExtra(Intent.EXTRA_SUBJECT, "Nudge Backup - ${item.name}")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
@@ -404,15 +549,231 @@ object NudgeBackupManager {
         }
     }
 
-    fun cleanOldAutoBackups(context: Context, retainCount: Int = 3) {
+    fun shareAutoBackupFile(context: Context, file: File) {
+        val sdf = SimpleDateFormat("MMM d, yyyy • h:mm a", Locale.getDefault())
+        val item = AutoBackupFileInfo(
+            file = file,
+            contentUri = null,
+            name = file.name,
+            formattedDate = sdf.format(Date(file.lastModified())),
+            sizeBytes = file.length(),
+            formattedSize = "${(file.length() + 1023) / 1024} KB",
+            destinationType = NudgeBackupScheduler.DESTINATION_INTERNAL
+        )
+        shareAutoBackupItem(context, item)
+    }
+
+    fun cleanOldInternalBackups(context: Context, retainCount: Int = 3) {
         val backups = getAutoBackupFiles(context)
         if (backups.size > retainCount) {
             backups.drop(retainCount).forEach { fileToDelete ->
                 try {
                     fileToDelete.delete()
-                } catch (ignored: Exception) {
+                } catch (_: Exception) {
                 }
             }
+        }
+    }
+
+    fun cleanOldMediaStoreBackups(context: Context, retainCount: Int = 3) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        try {
+            val items = mutableListOf<Pair<Long, Uri>>()
+            val projection = arrayOf(
+                MediaStore.Downloads._ID,
+                MediaStore.Downloads.DATE_MODIFIED
+            )
+            val selection = "${MediaStore.Downloads.DISPLAY_NAME} LIKE ? AND ${MediaStore.Downloads.RELATIVE_PATH} LIKE ?"
+            val selectionArgs = arrayOf("Nudge_Backup_%.nudgebackup", "%Download/Nudge Backups%")
+            val sortOrder = "${MediaStore.Downloads.DATE_MODIFIED} DESC"
+
+            context.contentResolver.query(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                selectionArgs,
+                sortOrder
+            )?.use { cursor ->
+                val idCol = cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID)
+                val dateCol = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DATE_MODIFIED)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idCol)
+                    val dateSec = cursor.getLong(dateCol)
+                    val uri = ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, id)
+                    items.add(Pair(dateSec, uri))
+                }
+            }
+
+            if (items.size > retainCount) {
+                items.drop(retainCount).forEach { (_, uri) ->
+                    try {
+                        context.contentResolver.delete(uri, null, null)
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("NudgeBackupManager", "Error cleaning old MediaStore backups: ${e.message}", e)
+        }
+    }
+
+    fun cleanOldCustomTreeBackups(context: Context, treeUriStr: String?, retainCount: Int = 3) {
+        if (treeUriStr.isNullOrBlank()) return
+        try {
+            val treeUri = Uri.parse(treeUriStr)
+            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
+                treeUri,
+                DocumentsContract.getTreeDocumentId(treeUri)
+            )
+            val projection = arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                DocumentsContract.Document.COLUMN_LAST_MODIFIED
+            )
+            val items = mutableListOf<Pair<Long, Uri>>()
+
+            context.contentResolver.query(childrenUri, projection, null, null, "${DocumentsContract.Document.COLUMN_LAST_MODIFIED} DESC")?.use { cursor ->
+                val idCol = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+                val nameCol = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                val dateCol = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+
+                while (cursor.moveToNext()) {
+                    val name = if (nameCol >= 0) cursor.getString(nameCol) else null
+                    if (name != null && name.startsWith("Nudge_Backup_") && name.endsWith(".nudgebackup")) {
+                        val docId = if (idCol >= 0) cursor.getString(idCol) else continue
+                        val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                        val dateMs = if (dateCol >= 0) cursor.getLong(dateCol) else 0L
+                        items.add(Pair(dateMs, docUri))
+                    }
+                }
+            }
+
+            if (items.size > retainCount) {
+                items.drop(retainCount).forEach { (_, docUri) ->
+                    try {
+                        DocumentsContract.deleteDocument(context.contentResolver, docUri)
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("NudgeBackupManager", "Error cleaning old custom tree backups: ${e.message}", e)
+        }
+    }
+
+    fun cleanOldAutoBackups(context: Context, retainCount: Int = 3) {
+        cleanOldInternalBackups(context, retainCount)
+    }
+
+    private suspend fun writeToInternalStorage(
+        context: Context,
+        zipBytes: ByteArray,
+        prefs: SharedPreferences
+    ): Result<File> {
+        val dir = getAutoBackupsDirectory(context)
+        val tempFile = File(dir, "auto_backup_in_progress_${System.currentTimeMillis()}.tmp")
+        return try {
+            FileOutputStream(tempFile).use { fos ->
+                fos.write(zipBytes)
+                fos.flush()
+            }
+            val timeStamp = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.US).format(Date())
+            val finalFile = File(dir, "Nudge_Backup_${timeStamp}.nudgebackup")
+            if (tempFile.renameTo(finalFile) || (finalFile.delete() && tempFile.renameTo(finalFile))) {
+                cleanOldInternalBackups(context, retainCount = 3)
+                Result.success(finalFile)
+            } else {
+                tempFile.copyTo(finalFile, overwrite = true)
+                tempFile.delete()
+                cleanOldInternalBackups(context, retainCount = 3)
+                Result.success(finalFile)
+            }
+        } catch (e: Exception) {
+            if (tempFile.exists()) tempFile.delete()
+            Result.failure(e)
+        }
+    }
+
+    private suspend fun writeToMediaStoreDownloads(
+        context: Context,
+        zipBytes: ByteArray
+    ): Result<Uri> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return Result.failure(UnsupportedOperationException("MediaStore downloads not supported below Android 10"))
+        }
+
+        val timeStamp = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.US).format(Date())
+        val fileName = "Nudge_Backup_${timeStamp}.nudgebackup"
+        val resolver = context.contentResolver
+
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+            put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
+            put(MediaStore.Downloads.RELATIVE_PATH, "Download/Nudge Backups")
+            put(MediaStore.Downloads.IS_PENDING, 1)
+        }
+
+        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+            ?: return Result.failure(IllegalStateException("Failed to create MediaStore entry in Downloads."))
+
+        return try {
+            resolver.openOutputStream(uri)?.use { os ->
+                os.write(zipBytes)
+                os.flush()
+            } ?: run {
+                resolver.delete(uri, null, null)
+                return Result.failure(IllegalStateException("Failed to open output stream to MediaStore URI."))
+            }
+
+            contentValues.clear()
+            contentValues.put(MediaStore.Downloads.IS_PENDING, 0)
+            resolver.update(uri, contentValues, null, null)
+
+            cleanOldMediaStoreBackups(context, retainCount = 3)
+            Result.success(uri)
+        } catch (e: Exception) {
+            try { resolver.delete(uri, null, null) } catch (_: Exception) {}
+            Result.failure(e)
+        }
+    }
+
+    private suspend fun writeToCustomTreeUri(
+        context: Context,
+        zipBytes: ByteArray,
+        treeUriStr: String
+    ): Result<Uri> {
+        val treeUri = Uri.parse(treeUriStr)
+        val resolver = context.contentResolver
+
+        val timeStamp = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.US).format(Date())
+        val fileName = "Nudge_Backup_${timeStamp}.nudgebackup"
+
+        val parentDocUri = DocumentsContract.buildDocumentUriUsingTree(
+            treeUri,
+            DocumentsContract.getTreeDocumentId(treeUri)
+        )
+
+        val newDocUri = DocumentsContract.createDocument(
+            resolver,
+            parentDocUri,
+            "application/octet-stream",
+            fileName
+        ) ?: return Result.failure(IllegalStateException("Could not create document in selected folder."))
+
+        return try {
+            resolver.openOutputStream(newDocUri)?.use { os ->
+                os.write(zipBytes)
+                os.flush()
+            } ?: run {
+                DocumentsContract.deleteDocument(resolver, newDocUri)
+                return Result.failure(IllegalStateException("Failed to open output stream in selected folder."))
+            }
+
+            cleanOldCustomTreeBackups(context, treeUriStr, retainCount = 3)
+            Result.success(newDocUri)
+        } catch (e: Exception) {
+            try { DocumentsContract.deleteDocument(resolver, newDocUri) } catch (_: Exception) {}
+            Result.failure(e)
         }
     }
 
@@ -421,53 +782,86 @@ object NudgeBackupManager {
         database: AppDatabase,
         prefs: SharedPreferences
     ): Result<File> {
-        val dir = getAutoBackupsDirectory(context)
-        val tempFile = File(dir, "auto_backup_in_progress.tmp")
-
         return try {
             // 1. Generate standard, fully-compatible .nudgebackup bytes
-            val (zipBytes, manifest) = createBackupZipBytes(context, database, prefs)
+            val (zipBytes, _) = createBackupZipBytes(context, database, prefs)
 
-            // 2. Validate created bytes before committing to disk
+            // 2. Validate created bytes before committing
             val validation = validateBackupBytes(zipBytes)
             if (!validation.isValid) {
-                tempFile.delete()
                 return Result.failure(IllegalStateException("Automatic backup self-validation failed: ${validation.errorMessage}"))
             }
 
-            // 3. Write safely to temp file
-            FileOutputStream(tempFile).use { fos ->
-                fos.write(zipBytes)
-                fos.flush()
+            val destination = prefs.getString(
+                NudgeBackupScheduler.KEY_AUTO_BACKUP_DESTINATION,
+                NudgeBackupScheduler.DESTINATION_INTERNAL
+            ) ?: NudgeBackupScheduler.DESTINATION_INTERNAL
+
+            var fallbackOccurred = false
+            var fallbackReason: String? = null
+
+            when (destination) {
+                NudgeBackupScheduler.DESTINATION_DOWNLOADS -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        val mediaResult = writeToMediaStoreDownloads(context, zipBytes)
+                        if (mediaResult.isSuccess) {
+                            prefs.edit()
+                                .remove(NudgeBackupScheduler.KEY_AUTO_BACKUP_LAST_FALLBACK_STATUS)
+                                .putLong(NudgeBackupScheduler.KEY_LAST_AUTO_BACKUP_TIMESTAMP, System.currentTimeMillis())
+                                .apply()
+                            // Return dummy internal file reference or create internal mirror
+                            val timeStamp = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.US).format(Date())
+                            return Result.success(File(getAutoBackupsDirectory(context), "Nudge_Backup_${timeStamp}.nudgebackup"))
+                        } else {
+                            fallbackOccurred = true
+                            fallbackReason = "Downloads storage unavailable (${mediaResult.exceptionOrNull()?.message}). Saved internally."
+                        }
+                    } else {
+                        fallbackOccurred = true
+                        fallbackReason = "Downloads destination requires Android 10+. Saved internally."
+                    }
+                }
+                NudgeBackupScheduler.DESTINATION_CUSTOM -> {
+                    val customTreeUriStr = prefs.getString(NudgeBackupScheduler.KEY_AUTO_BACKUP_CUSTOM_TREE_URI, null)
+                    if (!customTreeUriStr.isNullOrBlank()) {
+                        val customResult = writeToCustomTreeUri(context, zipBytes, customTreeUriStr)
+                        if (customResult.isSuccess) {
+                            prefs.edit()
+                                .remove(NudgeBackupScheduler.KEY_AUTO_BACKUP_LAST_FALLBACK_STATUS)
+                                .putLong(NudgeBackupScheduler.KEY_LAST_AUTO_BACKUP_TIMESTAMP, System.currentTimeMillis())
+                                .apply()
+                            val timeStamp = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.US).format(Date())
+                            return Result.success(File(getAutoBackupsDirectory(context), "Nudge_Backup_${timeStamp}.nudgebackup"))
+                        } else {
+                            fallbackOccurred = true
+                            fallbackReason = "Selected custom folder was inaccessible (${customResult.exceptionOrNull()?.message}). Saved internally."
+                        }
+                    } else {
+                        fallbackOccurred = true
+                        fallbackReason = "No custom folder selected. Saved internally."
+                    }
+                }
+                else -> {
+                    // Option A: Inside Nudge
+                    prefs.edit().remove(NudgeBackupScheduler.KEY_AUTO_BACKUP_LAST_FALLBACK_STATUS).apply()
+                }
             }
 
-            // 4. Generate target timestamped filename e.g. Nudge_Backup_2026-08-28_23-00.nudgebackup
-            val timeStamp = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.US).format(Date())
-            val finalFile = File(dir, "Nudge_Backup_${timeStamp}.nudgebackup")
-
-            // Atomic rename to final file
-            if (tempFile.renameTo(finalFile) || (finalFile.delete() && tempFile.renameTo(finalFile))) {
-                // 5. Retain latest 3 automatic backups safely inside auto_backups/
-                cleanOldAutoBackups(context, retainCount = 3)
-
-                // 6. Update Last Automatic Backup timestamp only after confirmed successful completion
-                val now = System.currentTimeMillis()
-                prefs.edit().putLong(NudgeBackupScheduler.KEY_LAST_AUTO_BACKUP_TIMESTAMP, now).apply()
-
-                Result.success(finalFile)
+            // Write to internal storage (either direct Option A or fallback)
+            val internalResult = writeToInternalStorage(context, zipBytes, prefs)
+            if (internalResult.isSuccess) {
+                val editor = prefs.edit().putLong(NudgeBackupScheduler.KEY_LAST_AUTO_BACKUP_TIMESTAMP, System.currentTimeMillis())
+                if (fallbackOccurred && fallbackReason != null) {
+                    editor.putString(NudgeBackupScheduler.KEY_AUTO_BACKUP_LAST_FALLBACK_STATUS, fallbackReason)
+                } else {
+                    editor.remove(NudgeBackupScheduler.KEY_AUTO_BACKUP_LAST_FALLBACK_STATUS)
+                }
+                editor.apply()
+                internalResult
             } else {
-                // Fallback copy if rename fails on some file systems
-                tempFile.copyTo(finalFile, overwrite = true)
-                tempFile.delete()
-                cleanOldAutoBackups(context, retainCount = 3)
-                val now = System.currentTimeMillis()
-                prefs.edit().putLong(NudgeBackupScheduler.KEY_LAST_AUTO_BACKUP_TIMESTAMP, now).apply()
-                Result.success(finalFile)
+                internalResult
             }
         } catch (e: Exception) {
-            if (tempFile.exists()) {
-                tempFile.delete()
-            }
             Result.failure(e)
         }
     }
