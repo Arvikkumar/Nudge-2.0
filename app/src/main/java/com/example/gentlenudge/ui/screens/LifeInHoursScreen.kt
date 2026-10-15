@@ -174,7 +174,7 @@ fun LifeInHoursScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val activeGoals by viewModel.activeTimeGoals.collectAsStateWithLifecycle()
+    val activeGoals by viewModel.selectedMonthActiveTimeGoals.collectAsStateWithLifecycle()
     val allGoals by viewModel.allTimeGoals.collectAsStateWithLifecycle()
     val allTimeGoalRecords by viewModel.allTimeGoalRecords.collectAsStateWithLifecycle()
     val selectedYearMonth by viewModel.selectedYearMonth.collectAsStateWithLifecycle()
@@ -369,18 +369,19 @@ fun LifeInHoursScreen(
 
         // Modal Sheet: Create / Edit Goal
         if (showCreateGoalSheet) {
+            val targetYm = try {
+                YearMonth.parse(editingYearMonth)
+            } catch (e: Exception) {
+                selectedYearMonth
+            }
             CreateOrEditGoalSheet(
                 goalToEdit = goalToEdit,
+                targetYearMonth = targetYm,
                 onDismiss = {
                     showCreateGoalSheet = false
                     goalToEdit = null
                 },
                 onSave = { name, dailyMinutes, colorHex, iconName, startDate ->
-                    val targetYm = try {
-                        YearMonth.parse(editingYearMonth)
-                    } catch (e: Exception) {
-                        selectedYearMonth
-                    }
                     if (goalToEdit != null) {
                         viewModel.updateTimeGoal(
                             goal = goalToEdit!!,
@@ -3490,6 +3491,7 @@ private fun LegendItem(symbol: String, label: String, color: Color) {
 @Composable
 private fun CreateOrEditGoalSheet(
     goalToEdit: TimeGoal?,
+    targetYearMonth: YearMonth = YearMonth.now(),
     onDismiss: () -> Unit,
     onSave: (name: String, dailyMinutes: Int, colorHex: String, iconName: String, startDate: String) -> Unit
 ) {
@@ -3519,7 +3521,7 @@ private fun CreateOrEditGoalSheet(
     var selectedColorHex by remember { mutableStateOf(goalToEdit?.colorHex ?: "#7C4DFF") }
     var selectedIconName by remember { mutableStateOf(goalToEdit?.iconName ?: "book") }
     var startDate by remember {
-        mutableStateOf(goalToEdit?.startDate ?: TimeGoalCalculations.formatLocalDate(LocalDate.now().withDayOfMonth(1)))
+        mutableStateOf(goalToEdit?.startDate ?: TimeGoalCalculations.formatLocalDate(targetYearMonth.atDay(1)))
     }
 
     var showColorPicker by remember { mutableStateOf(false) }

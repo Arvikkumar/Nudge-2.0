@@ -497,4 +497,126 @@ class AppDatabaseMigrationTest {
         cursor.close()
         db.close()
     }
+
+    @Test
+    fun testMigration7To8_addsYearMonthColumnAndBackfillsFromStartDate() = runBlocking {
+        val db = createHelper(7)
+        db.execSQL(
+            """
+            CREATE TABLE nudge_tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                title TEXT NOT NULL,
+                timeLabel TEXT NOT NULL,
+                dateLabel TEXT NOT NULL,
+                category TEXT NOT NULL,
+                priority TEXT NOT NULL,
+                repeat TEXT NOT NULL,
+                isDone INTEGER NOT NULL,
+                section TEXT NOT NULL,
+                createdAt INTEGER NOT NULL,
+                completedAt INTEGER,
+                soundType TEXT NOT NULL DEFAULT 'Small nudge',
+                ringtoneTitle TEXT NOT NULL DEFAULT 'Gentle Melody',
+                ringtoneUri TEXT,
+                vibrationPattern TEXT NOT NULL DEFAULT 'Gentle Pulse',
+                attachmentsJson TEXT NOT NULL DEFAULT '[]',
+                reminderCount INTEGER NOT NULL DEFAULT 1,
+                intervalMinutes INTEGER NOT NULL DEFAULT 0,
+                isDeleted INTEGER NOT NULL DEFAULT 0,
+                deletedAt INTEGER
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE TABLE time_goals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                name TEXT NOT NULL,
+                dailyTargetMinutes INTEGER NOT NULL,
+                colorHex TEXT NOT NULL,
+                iconName TEXT NOT NULL,
+                startDate TEXT NOT NULL,
+                isArchived INTEGER NOT NULL,
+                createdAt INTEGER NOT NULL,
+                orderIndex INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE TABLE time_goal_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                goalId INTEGER NOT NULL,
+                date TEXT NOT NULL,
+                actualMinutes INTEGER NOT NULL,
+                note TEXT,
+                updatedAt INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE TABLE time_goal_month_colors (
+                goalId INTEGER NOT NULL,
+                yearMonth TEXT NOT NULL,
+                colorHex TEXT NOT NULL,
+                updatedAt INTEGER NOT NULL,
+                PRIMARY KEY(goalId, yearMonth)
+            )
+            """.trimIndent()
+        )
+
+        db.execSQL(
+            """
+            INSERT INTO time_goals (id, name, dailyTargetMinutes, colorHex, iconName, startDate, isArchived, createdAt, orderIndex)
+            VALUES (1, 'Grammar Course', 120, '#7C4DFF', 'book', '2026-10-01', 0, 1600000000000, 0)
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO time_goals (id, name, dailyTargetMinutes, colorHex, iconName, startDate, isArchived, createdAt, orderIndex)
+            VALUES (2, 'Summer Reading', 60, '#1E88E5', 'book', '2026-08-15', 0, 1600000000000, 1)
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO time_goals (id, name, dailyTargetMinutes, colorHex, iconName, startDate, isArchived, createdAt, orderIndex)
+            VALUES (3, 'Legacy Goal With Short Date', 45, '#2E7D32', 'work', '', 0, 1700000000000, 2)
+            """.trimIndent()
+        )
+
+        // Run Migration 7 -> 8
+        AppDatabase.MIGRATION_7_8.migrate(db)
+
+        val cursor = db.query("SELECT id, name, yearMonth FROM time_goals ORDER BY id ASC")
+        assertTrue(cursor.moveToFirst())
+        assertEquals(1L, cursor.getLong(cursor.getColumnIndexOrThrow("id")))
+        assertEquals("Grammar Course", cursor.getString(cursor.getColumnIndexOrThrow("name")))
+        assertEquals("2026-10", cursor.getString(cursor.getColumnIndexOrThrow("yearMonth")))
+
+        assertTrue(cursor.moveToNext())
+        assertEquals(2L, cursor.getLong(cursor.getColumnIndexOrThrow("id")))
+        assertEquals("Summer Reading", cursor.getString(cursor.getColumnIndexOrThrow("name")))
+        assertEquals("2026-08", cursor.getString(cursor.getColumnIndexOrThrow("yearMonth")))
+
+        assertTrue(cursor.moveToNext())
+        assertEquals(3L, cursor.getLong(cursor.getColumnIndexOrThrow("id")))
+        val fallbackYm = cursor.getString(cursor.getColumnIndexOrThrow("yearMonth"))
+        assertTrue("Fallback yearMonth should not be empty", fallbackYm.isNotBlank())
+        assertEquals(7, fallbackYm.length)
+        cursor.close()
+        db.close()
+
+        // Verify Room database opens and queries correctly with Room instance
+        val roomDb = Room.databaseBuilder(context, AppDatabase::class.java, testDbName)
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
+            .build()
+
+        val goals = roomDb.timeGoalDao().getAllGoalsList()
+        assertEquals(3, goals.size)
+        assertEquals("2026-10", goals[0].yearMonth)
+        assertEquals("2026-08", goals[1].yearMonth)
+        roomDb.close()
+    }
 }
+

@@ -14,7 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-@Database(entities = [NudgeTask::class, TimeGoal::class, TimeGoalRecord::class, TimeGoalMonthColor::class], version = 7, exportSchema = false)
+@Database(entities = [NudgeTask::class, TimeGoal::class, TimeGoalRecord::class, TimeGoalMonthColor::class], version = 8, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun nudgeTaskDao(): NudgeTaskDao
     abstract fun timeGoalDao(): TimeGoalDao
@@ -119,13 +119,31 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE time_goals ADD COLUMN yearMonth TEXT NOT NULL DEFAULT ''")
+                db.execSQL(
+                    """
+                    UPDATE time_goals
+                    SET yearMonth = CASE
+                        WHEN startDate IS NOT NULL AND length(startDate) >= 7 THEN substr(startDate, 1, 7)
+                        WHEN createdAt IS NOT NULL AND createdAt > 0 THEN strftime('%Y-%m', createdAt / 1000, 'unixepoch')
+                        ELSE '1970-01'
+                    END
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_time_goals_yearMonth ON time_goals (yearMonth)")
+            }
+        }
+
         val ALL_MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
             MIGRATION_3_4,
             MIGRATION_4_5,
             MIGRATION_5_6,
-            MIGRATION_6_7
+            MIGRATION_6_7,
+            MIGRATION_7_8
         )
 
         fun getDatabase(context: Context, scope: CoroutineScope): AppDatabase {
@@ -226,6 +244,7 @@ abstract class AppDatabase : RoomDatabase() {
                 val currentYearMonth = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-", java.util.Locale.US).format(now)
                 val startOfMonth = "${currentYearMonth}01"
 
+                val ymString = currentYearMonth.trimEnd('-')
                 val starterGoals = listOf(
                     TimeGoal(
                         id = 1,
@@ -234,7 +253,8 @@ abstract class AppDatabase : RoomDatabase() {
                         colorHex = "#7C4DFF",
                         iconName = "book",
                         startDate = startOfMonth,
-                        orderIndex = 0
+                        orderIndex = 0,
+                        yearMonth = ymString
                     ),
                     TimeGoal(
                         id = 2,
@@ -243,7 +263,8 @@ abstract class AppDatabase : RoomDatabase() {
                         colorHex = "#1E88E5",
                         iconName = "fitness",
                         startDate = startOfMonth,
-                        orderIndex = 1
+                        orderIndex = 1,
+                        yearMonth = ymString
                     ),
                     TimeGoal(
                         id = 3,
@@ -252,7 +273,8 @@ abstract class AppDatabase : RoomDatabase() {
                         colorHex = "#E65100",
                         iconName = "community",
                         startDate = startOfMonth,
-                        orderIndex = 2
+                        orderIndex = 2,
+                        yearMonth = ymString
                     ),
                     TimeGoal(
                         id = 4,
@@ -261,7 +283,8 @@ abstract class AppDatabase : RoomDatabase() {
                         colorHex = "#2E7D32",
                         iconName = "work",
                         startDate = startOfMonth,
-                        orderIndex = 3
+                        orderIndex = 3,
+                        yearMonth = ymString
                     )
                 )
                 gDao.insertAllGoals(starterGoals)

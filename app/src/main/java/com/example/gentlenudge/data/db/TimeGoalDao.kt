@@ -20,6 +20,52 @@ interface TimeGoalDao {
     @Query("SELECT * FROM time_goals WHERE isArchived = 0 ORDER BY orderIndex ASC, id ASC")
     fun getActiveGoals(): Flow<List<TimeGoal>>
 
+    @Query("""
+        SELECT * FROM time_goals 
+        WHERE isArchived = 0 
+          AND (
+              yearMonth = :yearMonth 
+              OR (yearMonth = '' AND substr(startDate, 1, 7) = :yearMonth)
+              OR id IN (SELECT DISTINCT goalId FROM time_goal_records WHERE date LIKE :yearMonth || '%')
+          )
+        ORDER BY orderIndex ASC, id ASC
+    """)
+    fun getActiveGoalsForMonth(yearMonth: String): Flow<List<TimeGoal>>
+
+    @Query("""
+        SELECT * FROM time_goals 
+        WHERE (
+            yearMonth = :yearMonth 
+            OR (yearMonth = '' AND substr(startDate, 1, 7) = :yearMonth)
+            OR id IN (SELECT DISTINCT goalId FROM time_goal_records WHERE date LIKE :yearMonth || '%')
+        )
+        ORDER BY isArchived ASC, orderIndex ASC, id ASC
+    """)
+    fun getAllGoalsForMonth(yearMonth: String): Flow<List<TimeGoal>>
+
+    @Query("""
+        SELECT * FROM time_goals 
+        WHERE isArchived = 0 
+          AND (
+              yearMonth = :yearMonth 
+              OR (yearMonth = '' AND substr(startDate, 1, 7) = :yearMonth)
+              OR id IN (SELECT DISTINCT goalId FROM time_goal_records WHERE date LIKE :yearMonth || '%')
+          )
+        ORDER BY orderIndex ASC, id ASC
+    """)
+    suspend fun getActiveGoalsListForMonth(yearMonth: String): List<TimeGoal>
+
+    @Query("""
+        SELECT * FROM time_goals 
+        WHERE (
+            yearMonth = :yearMonth 
+            OR (yearMonth = '' AND substr(startDate, 1, 7) = :yearMonth)
+            OR id IN (SELECT DISTINCT goalId FROM time_goal_records WHERE date LIKE :yearMonth || '%')
+        )
+        ORDER BY isArchived ASC, orderIndex ASC, id ASC
+    """)
+    suspend fun getAllGoalsListForMonth(yearMonth: String): List<TimeGoal>
+
     @Query("SELECT * FROM time_goals WHERE id = :id LIMIT 1")
     suspend fun getGoalById(id: Long): TimeGoal?
 

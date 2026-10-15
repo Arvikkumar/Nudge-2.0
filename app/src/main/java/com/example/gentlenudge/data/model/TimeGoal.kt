@@ -43,9 +43,13 @@ import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "time_goals")
+@Entity(
+    tableName = "time_goals",
+    indices = [Index(value = ["yearMonth"])]
+)
 data class TimeGoal(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -56,8 +60,18 @@ data class TimeGoal(
     val startDate: String, // "YYYY-MM-DD" e.g. "2026-08-01"
     val isArchived: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
-    val orderIndex: Int = 0
+    val orderIndex: Int = 0,
+    val yearMonth: String = "" // "YYYY-MM" e.g. "2026-10"
 ) {
+    val effectiveYearMonth: String
+        get() = if (yearMonth.isNotBlank()) {
+            yearMonth
+        } else if (startDate.length >= 7) {
+            startDate.substring(0, 7)
+        } else {
+            "1970-01"
+        }
+
     fun parseColor(): Color {
         return try {
             Color(android.graphics.Color.parseColor(colorHex))

@@ -145,7 +145,7 @@ class NudgeViewModel(
                     ThemeMode.SYSTEM
                 }
             } else {
-                ThemeMode.LIGHT
+                ThemeMode.SYSTEM
             }
         }
     )
@@ -294,6 +294,28 @@ class NudgeViewModel(
             initialValue = emptyList()
         )
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val selectedMonthActiveTimeGoals: StateFlow<List<TimeGoal>> = _selectedYearMonth
+        .flatMapLatest { ym ->
+            repository.getActiveGoalsForMonth(ym.toString())
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val selectedMonthAllTimeGoals: StateFlow<List<TimeGoal>> = _selectedYearMonth
+        .flatMapLatest { ym ->
+            repository.getAllGoalsForMonth(ym.toString())
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     private val _selectedGoalForDetail = MutableStateFlow<TimeGoal?>(null)
     val selectedGoalForDetail: StateFlow<TimeGoal?> = _selectedGoalForDetail.asStateFlow()
 
@@ -417,6 +439,7 @@ class NudgeViewModel(
                     if (isOnlyOldDefaults) {
                         val now = java.time.LocalDate.now()
                         val currentYearMonth = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-", java.util.Locale.US).format(now)
+                        val ymString = currentYearMonth.trimEnd('-')
                         val startOfMonth = "${currentYearMonth}01"
 
                         repository.clearAllGoals()
@@ -428,7 +451,8 @@ class NudgeViewModel(
                                 colorHex = "#7C4DFF",
                                 iconName = "book",
                                 startDate = startOfMonth,
-                                orderIndex = 0
+                                orderIndex = 0,
+                                yearMonth = ymString
                             ),
                             TimeGoal(
                                 id = 2,
@@ -437,7 +461,8 @@ class NudgeViewModel(
                                 colorHex = "#1E88E5",
                                 iconName = "fitness",
                                 startDate = startOfMonth,
-                                orderIndex = 1
+                                orderIndex = 1,
+                                yearMonth = ymString
                             ),
                             TimeGoal(
                                 id = 3,
@@ -446,7 +471,8 @@ class NudgeViewModel(
                                 colorHex = "#E65100",
                                 iconName = "community",
                                 startDate = startOfMonth,
-                                orderIndex = 2
+                                orderIndex = 2,
+                                yearMonth = ymString
                             ),
                             TimeGoal(
                                 id = 4,
@@ -455,7 +481,8 @@ class NudgeViewModel(
                                 colorHex = "#2E7D32",
                                 iconName = "work",
                                 startDate = startOfMonth,
-                                orderIndex = 3
+                                orderIndex = 3,
+                                yearMonth = ymString
                             )
                         )
                         repository.insertAllGoals(newStarterGoals)
@@ -921,6 +948,7 @@ class NudgeViewModel(
 
             val now = java.time.LocalDate.now()
             val currentYearMonth = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-", java.util.Locale.US).format(now)
+            val ymString = currentYearMonth.trimEnd('-')
             val startOfMonth = "${currentYearMonth}01"
             repository.clearAllGoals()
             val newStarterGoals = listOf(
@@ -931,7 +959,8 @@ class NudgeViewModel(
                     colorHex = "#7C4DFF",
                     iconName = "book",
                     startDate = startOfMonth,
-                    orderIndex = 0
+                    orderIndex = 0,
+                    yearMonth = ymString
                 ),
                 TimeGoal(
                     id = 2,
@@ -940,7 +969,8 @@ class NudgeViewModel(
                     colorHex = "#1E88E5",
                     iconName = "fitness",
                     startDate = startOfMonth,
-                    orderIndex = 1
+                    orderIndex = 1,
+                    yearMonth = ymString
                 ),
                 TimeGoal(
                     id = 3,
@@ -949,7 +979,8 @@ class NudgeViewModel(
                     colorHex = "#E65100",
                     iconName = "community",
                     startDate = startOfMonth,
-                    orderIndex = 2
+                    orderIndex = 2,
+                    yearMonth = ymString
                 ),
                 TimeGoal(
                     id = 4,
@@ -958,7 +989,8 @@ class NudgeViewModel(
                     colorHex = "#2E7D32",
                     iconName = "work",
                     startDate = startOfMonth,
-                    orderIndex = 3
+                    orderIndex = 3,
+                    yearMonth = ymString
                 )
             )
             repository.insertAllGoals(newStarterGoals)
@@ -1290,7 +1322,7 @@ class NudgeViewModel(
         dailyTargetMinutes: Int,
         colorHex: String = "#7C4DFF",
         iconName: String = "book",
-        startDate: String = TimeGoalCalculations.formatLocalDate(LocalDate.now().withDayOfMonth(1)),
+        startDate: String? = null,
         yearMonth: YearMonth = _selectedYearMonth.value
     ) {
         val trimmed = name.trim()
@@ -1304,6 +1336,12 @@ class NudgeViewModel(
         }
 
         viewModelScope.launch {
+            val ymStr = yearMonth.toString()
+            val effectiveStartDate = if (!startDate.isNullOrBlank()) {
+                startDate
+            } else {
+                TimeGoalCalculations.formatLocalDate(yearMonth.atDay(1))
+            }
             val currentGoals = repository.getAllTimeGoalsList()
             val maxOrder = currentGoals.maxOfOrNull { it.orderIndex } ?: -1
             val goal = TimeGoal(
@@ -1311,11 +1349,11 @@ class NudgeViewModel(
                 dailyTargetMinutes = dailyTargetMinutes,
                 colorHex = colorHex,
                 iconName = iconName,
-                startDate = startDate,
+                startDate = effectiveStartDate,
+                yearMonth = ymStr,
                 orderIndex = maxOrder + 1
             )
             val insertedId = repository.insertTimeGoal(goal)
-            val ymStr = yearMonth.toString()
             repository.insertOrUpdateMonthColor(
                 TimeGoalMonthColor(
                     goalId = insertedId,
@@ -1360,11 +1398,20 @@ class NudgeViewModel(
         }
 
         viewModelScope.launch {
+            // Preserve the existing pursuit's yearMonth unless deliberately changed
+            val targetYmStr = if (goal.yearMonth.isNotBlank()) {
+                goal.yearMonth
+            } else if (goal.startDate.length >= 7) {
+                goal.startDate.substring(0, 7)
+            } else {
+                yearMonth.toString()
+            }
             val updated = goal.copy(
                 name = trimmed,
                 dailyTargetMinutes = dailyTargetMinutes,
                 iconName = iconName,
                 startDate = startDate,
+                yearMonth = targetYmStr,
                 isArchived = isArchived
             )
             repository.updateTimeGoal(updated)
@@ -1433,7 +1480,8 @@ class NudgeViewModel(
         viewModelScope.launch {
             try {
                 val pdfFile = withContext(Dispatchers.IO) {
-                    val goals = repository.getAllTimeGoalsList()
+                    val ymStr = yearMonth.toString()
+                    val goals = repository.getActiveGoalsListForMonth(ymStr)
                     val monthColorsList = repository.getAllMonthColorsList()
                     val monthColors = monthColorsList.associate { (it.goalId to it.yearMonth) to it.colorHex }
                     val goalsForMonth = goals.withMonthColors(yearMonth, monthColors)
@@ -1480,11 +1528,12 @@ class NudgeViewModel(
         viewModelScope.launch {
             try {
                 val pdfFile = withContext(Dispatchers.IO) {
-                    val goals = repository.getAllTimeGoalsList()
                     val monthColorsList = repository.getAllMonthColorsList()
                     val monthColors = monthColorsList.associate { (it.goalId to it.yearMonth) to it.colorHex }
 
                     val monthsData = monthsList.map { ym ->
+                        val ymStr = ym.toString()
+                        val goals = repository.getActiveGoalsListForMonth(ymStr)
                         val goalsForMonth = goals.withMonthColors(ym, monthColors)
                         val prefix = ym.format(DateTimeFormatter.ofPattern("yyyy-MM-", Locale.US))
                         val records = repository.getRecordsListForMonth(prefix)

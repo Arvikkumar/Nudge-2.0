@@ -30,6 +30,20 @@ class NudgeRepository(
     val allRecordedMonths: Flow<List<String>> = timeGoalDao?.getAllRecordedMonths() ?: flowOf(emptyList())
     val allMonthColors: Flow<List<TimeGoalMonthColor>> = timeGoalDao?.getAllMonthColorsFlow() ?: flowOf(emptyList())
 
+    fun getActiveGoalsForMonth(yearMonth: String): Flow<List<TimeGoal>> {
+        return timeGoalDao?.getActiveGoalsForMonth(yearMonth) ?: flowOf(emptyList())
+    }
+
+    fun getAllGoalsForMonth(yearMonth: String): Flow<List<TimeGoal>> {
+        return timeGoalDao?.getAllGoalsForMonth(yearMonth) ?: flowOf(emptyList())
+    }
+
+    suspend fun getActiveGoalsListForMonth(yearMonth: String): List<TimeGoal> =
+        timeGoalDao?.getActiveGoalsListForMonth(yearMonth) ?: emptyList()
+
+    suspend fun getAllGoalsListForMonth(yearMonth: String): List<TimeGoal> =
+        timeGoalDao?.getAllGoalsListForMonth(yearMonth) ?: emptyList()
+
     fun getRecordsForMonth(monthPrefix: String): Flow<List<TimeGoalRecord>> {
         return timeGoalDao?.getRecordsForMonth(monthPrefix) ?: flowOf(emptyList())
     }

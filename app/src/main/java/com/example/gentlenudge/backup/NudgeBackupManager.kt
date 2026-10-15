@@ -99,7 +99,7 @@ object NudgeBackupManager {
 
     const val APP_IDENTIFIER = "Nudge"
     const val BACKUP_FORMAT_VERSION = 1
-    const val CURRENT_SCHEMA_VERSION = 7
+    const val CURRENT_SCHEMA_VERSION = 8
 
     const val MANIFEST_ENTRY_NAME = "backup_manifest.json"
     const val PAYLOAD_ENTRY_NAME = "database_payload.json"
@@ -210,6 +210,7 @@ object NudgeBackupManager {
                     put("isArchived", g.isArchived)
                     put("createdAt", g.createdAt)
                     put("orderIndex", g.orderIndex)
+                    put("yearMonth", g.yearMonth)
                 })
             }
             put("timeGoals", goalsArray)
@@ -999,6 +1000,15 @@ object NudgeBackupManager {
                 if (dailyTarget < 0) {
                     return BackupValidationResult(isValid = false, errorMessage = "Time goal '$name' has invalid target minutes.")
                 }
+                val explicitYm = obj.optString("yearMonth", "")
+                val startDate = obj.optString("startDate", "")
+                val resolvedYm = if (explicitYm.isNotBlank()) {
+                    explicitYm
+                } else if (startDate.length >= 7) {
+                    startDate.substring(0, 7)
+                } else {
+                    ""
+                }
                 parsedGoals.add(
                     TimeGoal(
                         id = obj.optLong("id", 0L),
@@ -1006,10 +1016,11 @@ object NudgeBackupManager {
                         dailyTargetMinutes = dailyTarget,
                         colorHex = obj.optString("colorHex", "#7C4DFF"),
                         iconName = obj.optString("iconName", "book"),
-                        startDate = obj.optString("startDate", ""),
+                        startDate = startDate,
                         isArchived = obj.optBoolean("isArchived", false),
                         createdAt = obj.optLong("createdAt", System.currentTimeMillis()),
-                        orderIndex = obj.optInt("orderIndex", 0)
+                        orderIndex = obj.optInt("orderIndex", 0),
+                        yearMonth = resolvedYm
                     )
                 )
             }
